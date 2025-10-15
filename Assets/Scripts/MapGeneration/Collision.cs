@@ -133,4 +133,5 @@ namespace CollisionHelper
             return false; //no collision
         }
     }
+    // Moved into MapGeneration folder to group generation logic.
 }

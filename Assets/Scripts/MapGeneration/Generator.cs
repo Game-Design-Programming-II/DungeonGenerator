@@ -426,6 +426,7 @@ namespace MapGeneration
     {
         Debug.Log($"[Start/End] Start at world {_startWorld} in room centered {_startRoom.Position}, End at world {_endWorld} in room centered {_endRoom.Position}");
     }
+    // Moved into MapGeneration folder to align structure with namespace.
 }
 
 

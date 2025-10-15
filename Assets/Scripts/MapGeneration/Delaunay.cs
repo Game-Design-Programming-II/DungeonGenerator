@@ -236,4 +236,5 @@ namespace Delaunay
             return false;
         }
     }
+    // Moved into MapGeneration folder to group generation logic.
 }

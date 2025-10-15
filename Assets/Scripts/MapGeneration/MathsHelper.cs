@@ -38,4 +38,5 @@ namespace MathsHelper
             return isIntersecting;
         }
     }
+    // Moved into MapGeneration folder to group generation logic.
 }

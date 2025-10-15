@@ -72,4 +72,5 @@ namespace MapGeneration
             }
         }
     }
+    // Moved into MapGeneration folder to align structure with namespace.
 }

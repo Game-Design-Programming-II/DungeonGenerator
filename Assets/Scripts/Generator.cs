@@ -273,15 +273,15 @@ namespace MapGeneration
             
             Debug.Log($"[DrawContent] Rooms iterated: {roomsIterated_Draw}, active drawn: {roomsActive_Draw}");
 
-            /* TODO: rewrite corridor drawing so that walls and floors can exist on their own
-             tile maps without wall appearing inside rooms. Also need to include directional wall pieces, likely with WFC*/
+            /* Draw corridors with clean floormap/wallmap split:
+             * - Floor path on _floorMap
+             * - Clear any walls along the path on _wallMap
+             * - Add walls to _wallMap adjacent to the path, but never over existing floors (rooms/corridors)
+             */
             for (int i = 0; i < corridors.Count; i++)
             {
                 Edge curEdge = corridors[i];
-                // for now add wall tiles to floor map when drawing corridors
-                MapVisualController.RectFill(curEdge.GetPointA, curEdge.GetPointB, 2, _wallTile, _floorMap); 
-                MapVisualController.RectFill(curEdge.GetPointA, curEdge.GetPointB, 1, _floorTile, _floorMap, true);
-                MapVisualController.RectFill(curEdge.GetPointA, curEdge.GetPointB, 1, null, _wallMap, true); 
+                PaintCorridorSegment(curEdge.GetPointA, curEdge.GetPointB);
                 
                 iteration++;
 
@@ -294,6 +294,68 @@ namespace MapGeneration
 
             GenerateRoomContent();
             EnsureRoomConnectivityAStar(); // guarantee paths and clear blocking
+        }
+
+        // Paint a 1-tile wide corridor floor from A to B on _floorMap,
+        // clear any walls along the path on _wallMap, and add adjacent walls on _wallMap
+        // without overwriting existing floors (prevents walls inside rooms).
+        private void PaintCorridorSegment(Vector2 A, Vector2 B)
+        {
+            if (_floorMap == null) return;
+
+            foreach (var tilePos in EnumerateLineTiles(A, B))
+            {
+                // Clear walls along the path to avoid wall-over-floor
+                if (_wallMap != null)
+                {
+                    _wallMap.SetTile(tilePos, null);
+                }
+
+                // Lay floor
+                if (_floorTile != null)
+                {
+                    _floorMap.SetTile(tilePos, _floorTile);
+                }
+
+                // Add simple wall border on 4-neighbors where there is no floor
+                if (_wallMap != null && _wallTile != null)
+                {
+                    TryPlaceWall(tilePos + Vector3Int.up);
+                    TryPlaceWall(tilePos + Vector3Int.down);
+                    TryPlaceWall(tilePos + Vector3Int.left);
+                    TryPlaceWall(tilePos + Vector3Int.right);
+                }
+            }
+
+            void TryPlaceWall(Vector3Int pos)
+            {
+                // never place a wall where a floor already exists (room/corridor)
+                if (_floorMap.GetTile(pos) != null) return;
+                if (_wallMap.GetTile(pos) == null)
+                {
+                    _wallMap.SetTile(pos, _wallTile);
+                }
+            }
+        }
+
+        // Enumerate integer tile positions along a straight line between two points.
+        // Matches the stepping behavior used in MapVisualController.RectFill for line drawing.
+        private IEnumerable<Vector3Int> EnumerateLineTiles(Vector2 from, Vector2 to)
+        {
+            Vector3Int cur = new Vector3Int(Mathf.RoundToInt(from.x), Mathf.RoundToInt(from.y), 0);
+            Vector3Int end = new Vector3Int(Mathf.RoundToInt(to.x), Mathf.RoundToInt(to.y), 0);
+
+            yield return cur;
+            while (cur != end)
+            {
+                if (cur.x < end.x) cur.x++;
+                else if (cur.x > end.x) cur.x--;
+
+                if (cur.y < end.y) cur.y++;
+                else if (cur.y > end.y) cur.y--;
+
+                yield return cur;
+            }
         }
 
         private void GenerateRoomContent()

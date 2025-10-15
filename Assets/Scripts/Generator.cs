@@ -303,7 +303,7 @@ namespace MapGeneration
         {
             if (_floorMap == null) return;
 
-            foreach (var tilePos in EnumerateLineTiles(A, B))
+            foreach (Vector3Int tilePos in EnumerateLineTiles(A, B))
             {
                 // Clear walls along the path to avoid wall-over-floor
                 if (_wallMap != null)
@@ -362,11 +362,11 @@ namespace MapGeneration
 {
     if (_propMap != null) _propMap.ClearAllTiles();
 
-    var rng = new System.Random();
+    System.Random rng = new System.Random();
     IRoomContentGenerator gen = new RandomScatterGenerator(_propScatterDensity);
 
     // Choose Start/End rooms (from active grids) randomly
-    var activeRooms = new List<Room>(_roomGrids.Keys);
+    List<Room> activeRooms = new List<Room>(_roomGrids.Keys);
     if (activeRooms.Count >= 2)
     {
         int idxStart = rng.Next(activeRooms.Count);
@@ -377,18 +377,18 @@ namespace MapGeneration
         _endRoom   = activeRooms[idxEnd];
 
         // START
-        var gS = _roomGrids[_startRoom];
-        _startLocal = PickRandomInteriorFloor(gS, rng);
-        _startWorld = gS.CellToWorld(_startLocal.x, _startLocal.y);
-        gS.Cells[_startLocal.x, _startLocal.y] = CellType.SpecialStart;
+        RoomGrid startRoomGrid = _roomGrids[_startRoom];
+        _startLocal = PickRandomInteriorFloor(startRoomGrid, rng);
+        _startWorld = startRoomGrid.CellToWorld(_startLocal.x, _startLocal.y);
+        startRoomGrid.Cells[_startLocal.x, _startLocal.y] = CellType.SpecialStart;
         if (_startTile != null) _propMap.SetTile(_startWorld, _startTile);
         else Debug.LogWarning("[Start/End] _startTile not assigned; start marker will be invisible.");
 
         // END
-        var gE = _roomGrids[_endRoom];
-        _endLocal = PickRandomInteriorFloor(gE, rng);
-        _endWorld = gE.CellToWorld(_endLocal.x, _endLocal.y);
-        gE.Cells[_endLocal.x, _endLocal.y] = CellType.SpecialEnd;
+        RoomGrid endRoomGrid = _roomGrids[_endRoom];
+        _endLocal = PickRandomInteriorFloor(endRoomGrid, rng);
+        _endWorld = endRoomGrid.CellToWorld(_endLocal.x, _endLocal.y);
+        endRoomGrid.Cells[_endLocal.x, _endLocal.y] = CellType.SpecialEnd;
         if (_endTile != null) _propMap.SetTile(_endWorld, _endTile);
         else Debug.LogWarning("[Start/End] _endTile not assigned; end marker will be invisible.");
     }
@@ -399,15 +399,15 @@ namespace MapGeneration
     }
 
     // --- Scatter normal props in all OTHER rooms only ---
-    foreach (var kv in _roomGrids)
+    foreach (KeyValuePair<Room, RoomGrid> kv in _roomGrids)
     {
-        var room = kv.Key;
+        Room room = kv.Key;
         if (room == _startRoom || room == _endRoom) continue; // skip start/end rooms
 
         RoomGrid grid = kv.Value;
-        var localPlacements = gen.Generate(grid, rng); // returns local coords
+        List<Vector2Int> localPlacements = gen.Generate(grid, rng); // returns local coords
 
-        foreach (var p in localPlacements)
+        foreach (Vector2Int p in localPlacements)
         {
             if (!grid.InBounds(p.x, p.y)) continue;
             if (grid.Cells[p.x, p.y] != CellType.Floor) continue;
@@ -415,13 +415,13 @@ namespace MapGeneration
             // Mark logical grid and paint to PropMap
             grid.Cells[p.x, p.y] = CellType.Prop;
 
-            var world = grid.CellToWorld(p.x, p.y);
-            var chosen = PickWeightedProp(rng); // from earlier step
+            Vector3Int world = grid.CellToWorld(p.x, p.y);
+            TileBase chosen = PickWeightedProp(rng); // from earlier step
             if (chosen != null) _propMap.SetTile(world, chosen);
         }
     }
 
-    // Optional: quick log so you can verify which rooms were selected and where
+    // quick log so you can verify which rooms were selected and where
     if (_startRoom != null && _endRoom != null)
     {
         Debug.Log($"[Start/End] Start at world {_startWorld} in room centered {_startRoom.Position}, End at world {_endWorld} in room centered {_endRoom.Position}");
@@ -475,13 +475,13 @@ namespace MapGeneration
             int roomsIterated_Grid = 0;
             int roomsActive_Grid = 0;
 
-            foreach (var r in rooms)
+            foreach (Room r in rooms)
             {
                 roomsIterated_Grid++;
                 if (r.TurnedOff) continue; // only use active rooms
                 
                 roomsActive_Grid++;
-                var grid = new RoomGrid(r);
+                RoomGrid grid = new RoomGrid(r);
                 _roomGrids[r] = grid;
             }
             
@@ -561,7 +561,7 @@ namespace MapGeneration
             int roomsIterated_Astar = 0;
             int roomsActive_Astar = 0;
             
-            foreach (var r in _lastRooms)
+            foreach (Room r in _lastRooms)
             {
                 roomsIterated_Astar++;
                 if (!r.TurnedOff)
@@ -572,26 +572,26 @@ namespace MapGeneration
             }
 
             // quick lookup: world position -> room
-            var roomAt = new Dictionary<Vector2, Room>();
-            foreach (var r in _lastRooms) 
+            Dictionary<Vector2, Room> roomAt = new Dictionary<Vector2, Room>();
+            foreach (Room r in _lastRooms) 
                 if (!r.TurnedOff) roomAt[r.Position] = r;
 
             // for each corridor segment, attach the endpoint that equals a room Center
-            foreach (var seg in _lastCorridors)
+            foreach (Edge seg in _lastCorridors)
             {
                 // If a corridor segment starts at a room center, carve a doorway there.
-                if (roomAt.TryGetValue(seg.GetPointA, out var roomA) && _roomGrids.TryGetValue(roomA, out var gridA))
+                if (roomAt.TryGetValue(seg.GetPointA, out Room roomA) && _roomGrids.TryGetValue(roomA, out RoomGrid gridA))
                 {
                     Vector2 dir = seg.GetPointB - seg.GetPointA; // toward midpoint
-                    var door = CarveDoorOnBorder(gridA, roomA, dir);
+                    Vector2Int door = CarveDoorOnBorder(gridA, roomA, dir);
                     _roomDoors[roomA].Add(door);
                     PaintDoorDebug(gridA, door.x, door.y);
                 }
                 // Likewise if it ends at a room center
-                if (roomAt.TryGetValue(seg.GetPointB, out var roomB) && _roomGrids.TryGetValue(roomB, out var gridB))
+                if (roomAt.TryGetValue(seg.GetPointB, out Room roomB) && _roomGrids.TryGetValue(roomB, out RoomGrid gridB))
                 {
                     Vector2 dir = seg.GetPointA - seg.GetPointB; // toward midpoint
-                    var door = CarveDoorOnBorder(gridB, roomB, dir);
+                    Vector2Int door = CarveDoorOnBorder(gridB, roomB, dir);
                     _roomDoors[roomB].Add(door);
                     PaintDoorDebug(gridB, door.x, door.y);
                 }
@@ -599,39 +599,39 @@ namespace MapGeneration
             
             // TODO: REMOVE debug stuff
             int roomsWithDoors = 0;
-            foreach (var kv in _roomDoors)
+            foreach (KeyValuePair<Room, List<Vector2Int>> kv in _roomDoors)
                 if (kv.Value != null && kv.Value.Count > 0)
                     roomsWithDoors++;
             Debug.Log($"[A*] Rooms iterated: {roomsIterated_Astar}, active:  {roomsActive_Astar}, with doors:  {roomsWithDoors}");
 
             // For each room, A* between every pair of its door tiles and then clear props in the way
-            foreach (var kv in _roomDoors)
+            foreach (KeyValuePair<Room, List<Vector2Int>> kv in _roomDoors)
             {
-                var room = kv.Key;
-                var grid = _roomGrids[room];
-                var doors = kv.Value;
+                Room room = kv.Key;
+                RoomGrid grid = _roomGrids[room];
+                List<Vector2Int> doors = kv.Value;
 
                 for (int i = 0; i < doors.Count; i++)
                 for (int j = i + 1; j < doors.Count; j++)
                 {
-                    var start = doors[i];
-                    var goal  = doors[j];
+                    Vector2Int start = doors[i];
+                    Vector2Int goal  = doors[j];
 
-                    var path = FindPathAStar(grid, start, goal);
+                    List<Vector2Int> path = FindPathAStar(grid, start, goal);
                     if (path == null) continue;
 
                     // TODO: DEBUG: paint the A* path
                     PaintPathDebug(grid, path);
                     
                     // Clear any props along the chosen path
-                    foreach (var p in path)
+                    foreach (Vector2Int p in path)
                     {
                         if (!grid.InBounds(p.x, p.y)) continue;
 
                         if (grid.Cells[p.x, p.y] == CellType.Prop)
                         {
                             grid.Cells[p.x, p.y] = CellType.Floor;
-                            var w = grid.CellToWorld(p.x, p.y);
+                            Vector3Int w = grid.CellToWorld(p.x, p.y);
                             _propMap.SetTile(w, null); // remove prop tile on the visual layer
                         }
                     }
@@ -682,9 +682,9 @@ namespace MapGeneration
             bool Walkable(int x, int y)
                 => grid.InBounds(x, y) && grid.Cells[x, y] != CellType.Wall;
 
-            var open = new List<Node>();
-            var closed = new HashSet<Vector2Int>();
-            var nodes = new Dictionary<Vector2Int, Node>();
+            List<Node> open = new List<Node>();
+            HashSet<Vector2Int> closed = new HashSet<Vector2Int>();
+            Dictionary<Vector2Int, Node> nodes = new Dictionary<Vector2Int, Node>();
 
             Node StartNode() => new Node(start, g: 0, h: Heuristic(start, goal), parent: default);
             open.Add(StartNode());
@@ -697,7 +697,7 @@ namespace MapGeneration
                 for (int i = 1; i < open.Count; i++)
                     if (open[i].F < open[bestIdx].F)
                         bestIdx = i;
-                var current = open[bestIdx];
+                Node current = open[bestIdx];
                 open.RemoveAt(bestIdx);
 
                 if (current.Pos == goal)
@@ -718,7 +718,7 @@ namespace MapGeneration
 
                     int tentativeG = current.G + stepCost;
 
-                    if (nodes.TryGetValue(np, out var existing))
+                    if (nodes.TryGetValue(np, out Node existing))
                     {
                         if (tentativeG < existing.G)
                         {
@@ -729,7 +729,7 @@ namespace MapGeneration
                     }
                     else
                     {
-                        var n = new Node(np, tentativeG, Heuristic(np, goal), current.Pos);
+                        Node n = new Node(np, tentativeG, Heuristic(np, goal), current.Pos);
                         nodes[np] = n;
                         open.Add(n);
                     }
@@ -742,12 +742,12 @@ namespace MapGeneration
 
             List<Vector2Int> Reconstruct(Node end, Dictionary<Vector2Int, Node> map)
             {
-                var path = new List<Vector2Int>();
-                var cur = end.Pos;
+                List<Vector2Int> path = new List<Vector2Int>();
+                Vector2Int cur = end.Pos;
                 while (true)
                 {
                     path.Add(cur);
-                    var n = map[cur];
+                    Node n = map[cur];
                     if (n.Parent == null) break;
                     cur = n.Parent.Value;
                 }
@@ -800,21 +800,21 @@ namespace MapGeneration
             float total = 0f;
             for (int i = 0; i < _propSet.Count; i++)
             {
-                var p = _propSet[i];
-                if (p != null && p.tile != null && p.weight > 0f) total += p.weight;
+                WeightedProp prop = _propSet[i];
+                if (prop != null && prop.tile != null && prop.weight > 0f) total += prop.weight;
             }
             if (total <= 0f) return null;
 
-            double r = rng.NextDouble() * total;
+            double randomDouble = rng.NextDouble() * total;
             float acc = 0f;
 
             for (int i = 0; i < _propSet.Count; i++)
             {
-                var p = _propSet[i];
-                if (p == null || p.tile == null || p.weight <= 0f) continue;
+                WeightedProp prop = _propSet[i];
+                if (prop == null || prop.tile == null || prop.weight <= 0f) continue;
 
-                acc += p.weight;
-                if (r <= acc) return p.tile;
+                acc += prop.weight;
+                if (randomDouble <= acc) return prop.tile;
             }
             return null;
         }
@@ -864,16 +864,16 @@ namespace MapGeneration
         private void PaintDoorDebug(RoomGrid grid, int gx, int gy)
         {
             if (_debugMap == null || _doorTile == null) return;
-            var w = grid.CellToWorld(gx, gy);
+            Vector3Int w = grid.CellToWorld(gx, gy);
             _debugMap.SetTile(w, _doorTile);
         }
 
         private void PaintPathDebug(RoomGrid grid, System.Collections.Generic.IEnumerable<UnityEngine.Vector2Int> path)
         {
             if (_debugMap == null || _aStarTile == null) return;
-            foreach (var p in path)
+            foreach (Vector2Int p in path)
             {
-                var w = grid.CellToWorld(p.x, p.y);
+                Vector3Int w = grid.CellToWorld(p.x, p.y);
                 _debugMap.SetTile(w, _aStarTile);
             }
         }
@@ -995,7 +995,7 @@ namespace MapGeneration
 
         public List<Vector2Int> Generate(RoomGrid grid, System.Random rng)
         {
-            var results = new List<Vector2Int>();
+            List<Vector2Int> results = new List<Vector2Int>();
             // if we allow for rooms this small, then they can't contain objects without blocking the walkway
             if (grid.Width <= 2 || grid.Height <= 2) return results;
             

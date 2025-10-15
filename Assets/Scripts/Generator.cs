@@ -386,26 +386,19 @@ namespace MapGeneration
 
             for (int i = 0; i < mst.Count; i++)
             {
-                for (int x = 0; x < rooms.Count; x++)
-                {
-                    Vector2 A = mst[i].GetPointA;
-                    Vector2 B = mst[i].GetPointB;
+                Vector2 A = mst[i].GetPointA;
+                Vector2 B = mst[i].GetPointB;
 
-                    // TODO: turned off for now while A* isn't running in these rooms
-                    
-                    // if (rooms[x].TurnedOff == true)
-                    // {
-                    //     if (CollisionHelper.Collision2D.LineIntersectRoomBounds(A, B, rooms[x]) == true)
-                    //     {
-                    //         rooms[x].TurnedOff = false;
-                    //     }
-                    // }
-                    // else
-                    // {
-                        Vector2 midPoint = new Vector2(A.x, B.y);
-                        corridors.Add(new Edge(A, midPoint));
-                        corridors.Add(new Edge(midPoint, B));
-                    // }
+                Vector2 midPoint = new Vector2(A.x, B.y);
+
+                // Avoid adding zero-length segments in straight-line cases
+                if (midPoint != A)
+                {
+                    corridors.Add(new Edge(A, midPoint));
+                }
+                if (midPoint != B)
+                {
+                    corridors.Add(new Edge(midPoint, B));
                 }
             }
 

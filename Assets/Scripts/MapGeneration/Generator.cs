@@ -359,75 +359,75 @@ namespace MapGeneration
         }
 
         private void GenerateRoomContent()
-{
-    if (_propMap != null) _propMap.ClearAllTiles();
-
-    System.Random rng = new System.Random();
-    IRoomContentGenerator gen = new RandomScatterGenerator(_propScatterDensity);
-
-    // Choose Start/End rooms (from active grids) randomly
-    List<Room> activeRooms = new List<Room>(_roomGrids.Keys);
-    if (activeRooms.Count >= 2)
-    {
-        int idxStart = rng.Next(activeRooms.Count);
-        int idxEnd = rng.Next(activeRooms.Count - 1);
-        if (idxEnd >= idxStart) idxEnd++; // ensure distinct
-
-        _startRoom = activeRooms[idxStart];
-        _endRoom   = activeRooms[idxEnd];
-
-        // START
-        RoomGrid startRoomGrid = _roomGrids[_startRoom];
-        _startLocal = PickRandomInteriorFloor(startRoomGrid, rng);
-        _startWorld = startRoomGrid.CellToWorld(_startLocal.x, _startLocal.y);
-        startRoomGrid.Cells[_startLocal.x, _startLocal.y] = CellType.SpecialStart;
-        if (_startTile != null) _propMap.SetTile(_startWorld, _startTile);
-        else Debug.LogWarning("[Start/End] _startTile not assigned; start marker will be invisible.");
-
-        // END
-        RoomGrid endRoomGrid = _roomGrids[_endRoom];
-        _endLocal = PickRandomInteriorFloor(endRoomGrid, rng);
-        _endWorld = endRoomGrid.CellToWorld(_endLocal.x, _endLocal.y);
-        endRoomGrid.Cells[_endLocal.x, _endLocal.y] = CellType.SpecialEnd;
-        if (_endTile != null) _propMap.SetTile(_endWorld, _endTile);
-        else Debug.LogWarning("[Start/End] _endTile not assigned; end marker will be invisible.");
-    }
-    else
-    {
-        _startRoom = _endRoom = null;
-        Debug.LogWarning("[Start/End] Fewer than 2 active rooms — skipping start/end placement.");
-    }
-
-    // --- Scatter normal props in all OTHER rooms only ---
-    foreach (KeyValuePair<Room, RoomGrid> kv in _roomGrids)
-    {
-        Room room = kv.Key;
-        if (room == _startRoom || room == _endRoom) continue; // skip start/end rooms
-
-        RoomGrid grid = kv.Value;
-        List<Vector2Int> localPlacements = gen.Generate(grid, rng); // returns local coords
-
-        foreach (Vector2Int p in localPlacements)
         {
-            if (!grid.InBounds(p.x, p.y)) continue;
-            if (grid.Cells[p.x, p.y] != CellType.Floor) continue;
+            if (_propMap != null) _propMap.ClearAllTiles();
 
-            // Mark logical grid and paint to PropMap
-            grid.Cells[p.x, p.y] = CellType.Prop;
+            System.Random rng = new System.Random();
+            IRoomContentGenerator gen = new RandomScatterGenerator(_propScatterDensity);
 
-            Vector3Int world = grid.CellToWorld(p.x, p.y);
-            TileBase chosen = PickWeightedProp(rng); // from earlier step
-            if (chosen != null) _propMap.SetTile(world, chosen);
+            // Choose Start/End rooms (from active grids) randomly
+            List<Room> activeRooms = new List<Room>(_roomGrids.Keys);
+            if (activeRooms.Count >= 2)
+            {
+                int idxStart = rng.Next(activeRooms.Count);
+                int idxEnd = rng.Next(activeRooms.Count - 1);
+                if (idxEnd >= idxStart) idxEnd++; // ensure distinct
+
+                _startRoom = activeRooms[idxStart];
+                _endRoom   = activeRooms[idxEnd];
+
+                // START
+                RoomGrid startRoomGrid = _roomGrids[_startRoom];
+                _startLocal = PickRandomInteriorFloor(startRoomGrid, rng);
+                _startWorld = startRoomGrid.CellToWorld(_startLocal.x, _startLocal.y);
+                startRoomGrid.Cells[_startLocal.x, _startLocal.y] = CellType.SpecialStart;
+                if (_startTile != null) _propMap.SetTile(_startWorld, _startTile);
+                else Debug.LogWarning("[Start/End] _startTile not assigned; start marker will be invisible.");
+
+                // END
+                RoomGrid endRoomGrid = _roomGrids[_endRoom];
+                _endLocal = PickRandomInteriorFloor(endRoomGrid, rng);
+                _endWorld = endRoomGrid.CellToWorld(_endLocal.x, _endLocal.y);
+                endRoomGrid.Cells[_endLocal.x, _endLocal.y] = CellType.SpecialEnd;
+                if (_endTile != null) _propMap.SetTile(_endWorld, _endTile);
+                else Debug.LogWarning("[Start/End] _endTile not assigned; end marker will be invisible.");
+            }
+            else
+            {
+                _startRoom = _endRoom = null;
+                Debug.LogWarning("[Start/End] Fewer than 2 active rooms — skipping start/end placement.");
+            }
+
+            // --- Scatter normal props in all OTHER rooms only ---
+            foreach (KeyValuePair<Room, RoomGrid> kv in _roomGrids)
+            {
+                Room room = kv.Key;
+                if (room == _startRoom || room == _endRoom) continue; // skip start/end rooms
+
+                RoomGrid grid = kv.Value;
+                List<Vector2Int> localPlacements = gen.Generate(grid, rng); // returns local coords
+
+                foreach (Vector2Int p in localPlacements)
+                {
+                    if (!grid.InBounds(p.x, p.y)) continue;
+                    if (grid.Cells[p.x, p.y] != CellType.Floor) continue;
+
+                    // Mark logical grid and paint to PropMap
+                    grid.Cells[p.x, p.y] = CellType.Prop;
+
+                    Vector3Int world = grid.CellToWorld(p.x, p.y);
+                    TileBase chosen = PickWeightedProp(rng); // from earlier step
+                    if (chosen != null) _propMap.SetTile(world, chosen);
+                }
+            }
+
+            // quick log so you can verify which rooms were selected and where
+            if (_startRoom != null && _endRoom != null)
+            {
+                Debug.Log($"[Start/End] Start at world {_startWorld} in room centered {_startRoom.Position}, End at world {_endWorld} in room centered {_endRoom.Position}");
+            }
+            // Moved into MapGeneration folder to align structure with namespace.
         }
-    }
-
-    // quick log so you can verify which rooms were selected and where
-    if (_startRoom != null && _endRoom != null)
-    {
-        Debug.Log($"[Start/End] Start at world {_startWorld} in room centered {_startRoom.Position}, End at world {_endWorld} in room centered {_endRoom.Position}");
-    }
-    // Moved into MapGeneration folder to align structure with namespace.
-}
 
 
         private void AddRandomEdges(List<Edge> edges, List<Edge> mst)
@@ -472,21 +472,21 @@ namespace MapGeneration
         {
             _roomGrids.Clear(); // remove old room grids
 
-            // TODO: remove debug
-            int roomsIterated_Grid = 0;
-            int roomsActive_Grid = 0;
+            // // TODO: remove debug
+            // int roomsIterated_Grid = 0;
+            // int roomsActive_Grid = 0;
 
             foreach (Room r in rooms)
             {
-                roomsIterated_Grid++;
+                // roomsIterated_Grid++;
                 if (r.TurnedOff) continue; // only use active rooms
                 
-                roomsActive_Grid++;
+                // roomsActive_Grid++;
                 RoomGrid grid = new RoomGrid(r);
                 _roomGrids[r] = grid;
             }
             
-            Debug.Log($"[BuildRoomdGrids] Rooms iterated: {roomsIterated_Grid},  active grids: {roomsActive_Grid}");
+            // Debug.Log($"[BuildRoomdGrids] Rooms iterated: {roomsIterated_Grid},  active grids: {roomsActive_Grid}");
         }
 
         private int SortBySize(Room A, Room B)

@@ -7,12 +7,12 @@ public class healthPack : MonoBehaviour
     {
         
 
-        if (curPlayerhealth < maxplayerhealth)
-        {
-            curPlayerhealth == maxplayerhealh;
-
-        }
-        else
-            return;
+        // if (curPlayerhealth < maxplayerhealth)
+        // {
+        //     curPlayerhealth == maxplayerhealh;
+        //
+        // }
+        // else
+        //     return;
     }
 }

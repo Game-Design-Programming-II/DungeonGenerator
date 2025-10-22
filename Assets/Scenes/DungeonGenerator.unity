@@ -708,13 +708,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   mapGenerator: {fileID: 1371193002}
   playerParent: {fileID: 255235800}
-  maxPlayers: 3
-  playerPrefabs:
-  - {fileID: 8076220598909356601, guid: 4281b1c96bdeb43d7a9c2bfb51ceecc9, type: 3}
-  spawnOffsets:
-  - {x: 0, y: 0}
-  - {x: -1.5, y: 0}
-  - {x: 1.5, y: 0}
+  primaryPlayerPrefab: {fileID: 8076220598909356601, guid: 4281b1c96bdeb43d7a9c2bfb51ceecc9, type: 3}
 --- !u!4 &768669592
 Transform:
   m_ObjectHideFlags: 0

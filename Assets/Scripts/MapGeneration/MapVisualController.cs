@@ -22,12 +22,16 @@ namespace MapGeneration
             }
         }
 
-        public static void RectFill(Vector2 positionA, Vector2 positionB, int radius,
+        public static void RectFill(Vector2 positionA, Vector2 positionB, int thickness,
             TileBase tile, Tilemap tilemap, bool overrideTile = false)
         {
-            for (int x = -radius; x < radius; x++)
+            int clampedThickness = Mathf.Max(1, thickness);
+            int negativeExtent = (clampedThickness - 1) / 2;
+            int positiveExtent = clampedThickness / 2;
+
+            for (int x = -negativeExtent; x <= positiveExtent; x++)
             {
-                for (int y = -radius; y < radius; y++)
+                for (int y = -negativeExtent; y <= positiveExtent; y++)
                 {
                     bool complete = false;
 

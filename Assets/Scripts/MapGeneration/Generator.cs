@@ -1,5 +1,6 @@
 using UnityEngine;
 using MathsHelper;
+using System;
 using System.Collections.Generic;
 using System.Collections;
 using Delaunay;
@@ -24,11 +25,13 @@ namespace MapGeneration
         [SerializeField] private Tilemap _floorMap;
         [SerializeField] private Tilemap _wallMap;
         [SerializeField] private Tilemap _propMap;
+        [SerializeField] private TilemapCollider2D _wallCollider;
+        [SerializeField, Tooltip("Optional composite collider used with the wall tilemap.")]
+        private CompositeCollider2D _wallComposite;
         
         [Header("Single-Sprite Tiles")]
         [SerializeField] private TileBase _floorTile;
         [SerializeField] private TileBase _wallTile;
-        [SerializeField] private TileBase _startTile;
         [SerializeField] private TileBase _endTile;
 
         [Header("Prop content (placeholder until WFC implemented)")] 
@@ -45,6 +48,12 @@ namespace MapGeneration
         private Room _startRoom, _endRoom;
         private Vector2Int _startLocal, _endLocal; // local coords inside their rooms
         private Vector3Int _startWorld, _endWorld; // world tile positions
+        private bool _hasPlayerSpawn;
+        private Vector3 _playerSpawnWorldPosition;
+
+        public bool HasPlayerSpawn => _hasPlayerSpawn;
+        public Vector3 PlayerSpawnWorldPosition => _playerSpawnWorldPosition;
+        public event Action<Vector3> PlayerSpawnPointUpdated;
         
         // A*
         private Dictionary<Room, List<Vector2Int>> _roomDoors = new();
@@ -70,6 +79,9 @@ namespace MapGeneration
             if (_wallMap != null) _wallMap.ClearAllTiles();
             if (_propMap != null) _propMap.ClearAllTiles();
             if (_debugMap != null) _debugMap.ClearAllTiles();
+
+            ClearPlayerSpawnPoint();
+            RefreshWallColliders();
             
             List<Room> rooms = new List<Room>();
 
@@ -294,6 +306,7 @@ namespace MapGeneration
 
             GenerateRoomContent();
             EnsureRoomConnectivityAStar(); // guarantee paths and clear blocking
+            RefreshWallColliders();
         }
 
         // Paint a 1-tile wide corridor floor from A to B on _floorMap,
@@ -381,8 +394,7 @@ namespace MapGeneration
                 _startLocal = PickRandomInteriorFloor(startRoomGrid, rng);
                 _startWorld = startRoomGrid.CellToWorld(_startLocal.x, _startLocal.y);
                 startRoomGrid.Cells[_startLocal.x, _startLocal.y] = CellType.SpecialStart;
-                if (_startTile != null) _propMap.SetTile(_startWorld, _startTile);
-                else Debug.LogWarning("[Start/End] _startTile not assigned; start marker will be invisible.");
+                UpdatePlayerSpawnPoint(_startWorld);
 
                 // END
                 RoomGrid endRoomGrid = _roomGrids[_endRoom];
@@ -395,6 +407,7 @@ namespace MapGeneration
             else
             {
                 _startRoom = _endRoom = null;
+                ClearPlayerSpawnPoint();
                 Debug.LogWarning("[Start/End] Fewer than 2 active rooms — skipping start/end placement.");
             }
 
@@ -429,12 +442,49 @@ namespace MapGeneration
             // Moved into MapGeneration folder to align structure with namespace.
         }
 
+        private void ClearPlayerSpawnPoint()
+        {
+            _hasPlayerSpawn = false;
+            _playerSpawnWorldPosition = Vector3.zero;
+        }
+
+        private void UpdatePlayerSpawnPoint(Vector3Int cellPosition)
+        {
+            Vector3 worldPosition;
+
+            if (_floorMap != null)
+            {
+                worldPosition = _floorMap.GetCellCenterWorld(cellPosition);
+            }
+            else
+            {
+                worldPosition = new Vector3(cellPosition.x + 0.5f, cellPosition.y + 0.5f, cellPosition.z);
+            }
+
+            _playerSpawnWorldPosition = worldPosition;
+            _hasPlayerSpawn = true;
+            PlayerSpawnPointUpdated?.Invoke(_playerSpawnWorldPosition);
+        }
+
+        private void RefreshWallColliders()
+        {
+            if (_wallCollider != null)
+            {
+                _wallCollider.ProcessTilemapChanges();
+            }
+
+            if (_wallComposite != null)
+            {
+                _wallComposite.GenerateGeometry();
+            }
+        }
+
 
         private void AddRandomEdges(List<Edge> edges, List<Edge> mst)
         {
             for (int i = 0; i < edges.Count; i++)
             {
-                float rng = Random.Range(0f, 1f);
+                float rng = UnityEngine.Random.Range(0f, 1f);
 
                 if (rng < _edgeReconnectionPercent)
                 {
@@ -650,30 +700,52 @@ namespace MapGeneration
             if (horizontal)
             {
                 bool right = dir.x > 0f;
-                int gy = Mathf.Clamp(Mathf.RoundToInt(room.Position.y) - grid.Origin.y, 1, grid.Height - 2);
-                int gxBorder   = right ? grid.Width - 1 : 0;
-                int gxInterior = right ? grid.Width - 2 : 1;
+                int doorWorldX = Mathf.RoundToInt(room.Position.x) + (right ? room.GetWidth : -room.GetWidth);
+                int doorWorldY = Mathf.RoundToInt(room.Position.y);
 
-                grid.Cells[gxBorder, gy] = CellType.Floor; // carve 1-tile doorway in the wall ring
+                Vector2Int doorBorder = grid.WorldToCell(new Vector3Int(doorWorldX, doorWorldY, 0));
+                Vector2Int doorInterior = new Vector2Int(
+                    Mathf.Clamp(doorBorder.x + (right ? -1 : 1), 0, grid.Width - 1),
+                    Mathf.Clamp(doorBorder.y, 0, grid.Height - 1));
 
-                PaintDoorDebug(grid, gxBorder, gy);
-                PaintDoorDebug(grid, gxInterior, gy);
-                
-                return new Vector2Int(gxInterior, gy);     // interior node to path from/to
+                if (grid.InBounds(doorBorder.x, doorBorder.y))
+                {
+                    grid.Cells[doorBorder.x, doorBorder.y] = CellType.Floor; // carve doorway in wall ring
+                    PaintDoorDebug(grid, doorBorder.x, doorBorder.y);
+                }
+
+                if (grid.InBounds(doorInterior.x, doorInterior.y))
+                {
+                    grid.Cells[doorInterior.x, doorInterior.y] = CellType.Floor;
+                    PaintDoorDebug(grid, doorInterior.x, doorInterior.y);
+                }
+
+                return doorInterior;     // interior node to path from/to
             }
             else
             {
                 bool up = dir.y > 0f;
-                int gx = Mathf.Clamp(Mathf.RoundToInt(room.Position.x) - grid.Origin.x, 1, grid.Width - 2);
-                int gyBorder   = up ? grid.Height - 1 : 0;
-                int gyInterior = up ? grid.Height - 2 : 1;
+                int doorWorldY = Mathf.RoundToInt(room.Position.y) + (up ? room.GetHeight : -room.GetHeight);
+                int doorWorldX = Mathf.RoundToInt(room.Position.x);
 
-                grid.Cells[gx, gyBorder] = CellType.Floor;
+                Vector2Int doorBorder = grid.WorldToCell(new Vector3Int(doorWorldX, doorWorldY, 0));
+                Vector2Int doorInterior = new Vector2Int(
+                    Mathf.Clamp(doorBorder.x, 0, grid.Width - 1),
+                    Mathf.Clamp(doorBorder.y + (up ? -1 : 1), 0, grid.Height - 1));
+
+                if (grid.InBounds(doorBorder.x, doorBorder.y))
+                {
+                    grid.Cells[doorBorder.x, doorBorder.y] = CellType.Floor;
+                    PaintDoorDebug(grid, doorBorder.x, doorBorder.y);
+                }
+
+                if (grid.InBounds(doorInterior.x, doorInterior.y))
+                {
+                    grid.Cells[doorInterior.x, doorInterior.y] = CellType.Floor;
+                    PaintDoorDebug(grid, doorInterior.x, doorInterior.y);
+                }
                 
-                PaintDoorDebug(grid, gx, gyBorder);
-                PaintDoorDebug(grid, gx, gyInterior);
-                
-                return new Vector2Int(gx, gyInterior);
+                return doorInterior;
             }
         }
 

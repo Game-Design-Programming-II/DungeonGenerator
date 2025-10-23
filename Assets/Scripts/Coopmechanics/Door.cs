@@ -18,7 +18,7 @@ public class Door : MonoBehaviour
 
     public void CloseDoorTemporary()
     {
-        if (isOpen) return; 
+        if (isOpen) return;
         var col = GetComponent<Collider2D>();
         if (col) col.enabled = true;
     }

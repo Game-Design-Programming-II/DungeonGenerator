@@ -2,44 +2,41 @@ using UnityEngine;
 
 public class PressurePlateManager : MonoBehaviour
 {
-    public PressurePlate[] plates;
-    public Door door;
+    public PressurePlate[] plates; // Assign all plates here
+    public Door door;              // Assign the door here
 
     private bool permanentlyActivated = false;
 
-    void Start()
+    private void Awake()
     {
+        // Subscribe to plate events early
         foreach (var plate in plates)
         {
-            plate.OnPressed.AddListener(CheckPlates);
-            plate.OnReleased.AddListener(CheckPlates);
+            plate.OnPressed.AddListener(OnPlateStateChanged);
+            plate.OnReleased.AddListener(OnPlateStateChanged);
         }
     }
 
-    void CheckPlates()
+    public void OnPlateStateChanged()
     {
-        if (permanentlyActivated)
-            return;
+        if (permanentlyActivated) return;
 
-        bool allPressed = true;
+        int pressedCount = 0;
         foreach (var plate in plates)
         {
-            if (!plate.IsPressed)
-            {
-                allPressed = false;
-                break;
-            }
+            if (plate.IsPressed) pressedCount++;
         }
 
-        if (allPressed)
+        if (pressedCount == plates.Length)
         {
             permanentlyActivated = true;
             door.OpenDoor();
-            Debug.Log("Door permanently activated!");
+            Debug.Log("Both players stood on plates — door permanently opened!");
         }
         else
         {
             door.CloseDoorTemporary();
+            Debug.Log("Not all plates pressed yet — door closed.");
         }
     }
 }

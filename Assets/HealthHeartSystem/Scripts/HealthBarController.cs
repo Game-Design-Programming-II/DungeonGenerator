@@ -2,6 +2,7 @@
  *  Author: ariel oliveira [o.arielg@gmail.com]
  */
 
+using System;
 using MapGeneration;
 using UnityEngine;
 using UnityEngine.UI;
@@ -68,6 +69,13 @@ public class HealthBarController : MonoBehaviour
 
     void InstantiateHeartContainers()
     {
+        if (heartsParent.childCount != 0)
+        {
+            foreach (Transform child in heartsParent)
+            {
+                GameObject.Destroy(child.gameObject);
+            }
+        }
         for (int i = 0; i < PlayerStats.Instance.MaxTotalHealth; i++)
         {
             GameObject temp = Instantiate(heartContainerPrefab);
@@ -75,5 +83,6 @@ public class HealthBarController : MonoBehaviour
             heartContainers[i] = temp;
             heartFills[i] = temp.transform.Find("HeartFill").GetComponent<Image>();
         }
+
     }
 }

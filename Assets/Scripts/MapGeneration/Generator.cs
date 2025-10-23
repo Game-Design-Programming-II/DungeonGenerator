@@ -69,7 +69,15 @@ namespace MapGeneration
 
         private void Start()
         {
-            Generate();
+            //Generate();
+        }
+
+        private void Update()
+        {
+            if (Input.GetKeyDown(KeyCode.Tab))
+            {
+                Generate();
+            }
         }
 
         public void Generate()

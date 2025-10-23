@@ -67,6 +67,9 @@ namespace MapGeneration
         private List<Edge> _gizmoEdges = new List<Edge>();
         private List<Edge> _gizmoMST = new List<Edge>();
 
+        // Health Bar Controller
+        public GameObject healthBarController;
+
         private void Start()
         {
             //Generate();

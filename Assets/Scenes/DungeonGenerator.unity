@@ -119,6 +119,52 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
+--- !u!1 &2136506
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2136508}
+  - component: {fileID: 2136507}
+  m_Layer: 0
+  m_Name: HealthBarController
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &2136507
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2136506}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5c0f78e4acfe21a4594760304164796e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  heartsParent: {fileID: 975229004}
+  heartContainerPrefab: {fileID: 1000013667988280, guid: 677e3f20f0ab76a45bd59d5b73b0b446, type: 3}
+--- !u!4 &2136508
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2136506}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &228086543
 GameObject:
   m_ObjectHideFlags: 0
@@ -707,6 +753,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   mapGenerator: {fileID: 1371193002}
+  _healthBarController: {fileID: 2136507}
   playerParent: {fileID: 255235800}
   primaryPlayerPrefab: {fileID: 4609648802464072355, guid: 48f134eb85d1540d7aaa89ebe452e881, type: 3}
 --- !u!4 &768669592
@@ -757,8 +804,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -225.26123, y: 152.64278}
-  m_SizeDelta: {x: 200, y: 60}
+  m_AnchoredPosition: {x: -224.53828, y: 150.1}
+  m_SizeDelta: {x: 195.7234, y: 60}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &975229005
 MonoBehaviour:
@@ -777,11 +824,11 @@ MonoBehaviour:
     m_Right: 0
     m_Top: 0
     m_Bottom: 0
-  m_ChildAlignment: 4
+  m_ChildAlignment: 3
   m_StartCorner: 0
   m_StartAxis: 0
-  m_CellSize: {x: 8, y: 7}
-  m_Spacing: {x: 1, y: 1}
+  m_CellSize: {x: 20, y: 20}
+  m_Spacing: {x: 2, y: 2}
   m_Constraint: 0
   m_ConstraintCount: 2
 --- !u!1 &1048886278
@@ -1173,6 +1220,7 @@ MonoBehaviour:
   _doorTile: {fileID: 11400000, guid: 49645ad6b49a64f96b480f961bf4eb7a, type: 2}
   _aStarTile: {fileID: 11400000, guid: fda4023edd94a47909d4e924ebc0cf51, type: 2}
   _debugMap: {fileID: 1048886281}
+  healthBarController: {fileID: 2136506}
 --- !u!4 &1371193003
 Transform:
   m_ObjectHideFlags: 0
@@ -1545,6 +1593,7 @@ SceneRoots:
   - {fileID: 1371193003}
   - {fileID: 725286136}
   - {fileID: 768669592}
+  - {fileID: 2136508}
   - {fileID: 255235800}
   - {fileID: 1966340544}
   - {fileID: 1077051581}

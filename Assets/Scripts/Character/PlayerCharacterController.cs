@@ -15,9 +15,7 @@ namespace DungeonGenerator.Character
     public class PlayerCharacterController : MonoBehaviour
     {
         [Header("Movement")]
-        [SerializeField] private float moveSpeed = 5f;
-        [SerializeField, Tooltip("Optional sprint multiplier applied while sprint input is held.")]
-        private float sprintMultiplier = 1.5f;
+        [SerializeField] private float moveSpeed = 10f;
 
         [Header("Dash")]
         [SerializeField] private float dashDistance = 7f;
@@ -44,13 +42,11 @@ namespace DungeonGenerator.Character
         private PlayerInput playerInput;
 
         private InputAction moveAction;
-        private InputAction sprintAction;
         private InputAction attackAction;
         private InputAction interactAction;
         private InputAction dashAction;
 
         private Vector2 moveInput;
-        private bool sprintHeld;
         private Vector2 lastMoveDirection = Vector2.up;
         private bool isDashing;
         private Vector2 dashDirection;
@@ -89,7 +85,6 @@ namespace DungeonGenerator.Character
             }
 
             moveAction = TryGetAction("Move");
-            sprintAction = TryGetAction("Sprint");
             attackAction = TryGetAction("Attack");
             interactAction = TryGetAction("Interact");
             dashAction = TryGetAction("Dash");
@@ -98,12 +93,6 @@ namespace DungeonGenerator.Character
             {
                 moveAction.performed += OnMove;
                 moveAction.canceled += OnMove;
-            }
-
-            if (sprintAction != null)
-            {
-                sprintAction.started += OnSprintStarted;
-                sprintAction.canceled += OnSprintCanceled;
             }
 
             if (attackAction != null)
@@ -128,12 +117,6 @@ namespace DungeonGenerator.Character
             {
                 moveAction.performed -= OnMove;
                 moveAction.canceled -= OnMove;
-            }
-
-            if (sprintAction != null)
-            {
-                sprintAction.started -= OnSprintStarted;
-                sprintAction.canceled -= OnSprintCanceled;
             }
 
             if (attackAction != null)
@@ -176,8 +159,7 @@ namespace DungeonGenerator.Character
                 lastMoveDirection = desiredDirection;
             }
 
-            float speedMultiplier = sprintHeld ? sprintMultiplier : 1f;
-            Vector2 velocity = desiredDirection * (moveSpeed * speedMultiplier);
+            Vector2 velocity = desiredDirection * moveSpeed;
             body.linearVelocity = velocity;
 
             if (velocity.sqrMagnitude <= 0.0001f && !isDashing)
@@ -226,16 +208,6 @@ namespace DungeonGenerator.Character
         private void OnMove(InputAction.CallbackContext context)
         {
             moveInput = context.ReadValue<Vector2>();
-        }
-
-        private void OnSprintStarted(InputAction.CallbackContext context)
-        {
-            sprintHeld = true;
-        }
-
-        private void OnSprintCanceled(InputAction.CallbackContext context)
-        {
-            sprintHeld = false;
         }
 
         private void OnAttackPerformed(InputAction.CallbackContext context)
@@ -299,7 +271,6 @@ namespace DungeonGenerator.Character
         private void OnValidate()
         {
             moveSpeed = Mathf.Max(0f, moveSpeed);
-            sprintMultiplier = Mathf.Max(1f, sprintMultiplier);
             dashDistance = Mathf.Max(0f, dashDistance);
             dashDuration = Mathf.Max(0.05f, dashDuration);
             dashCooldown = Mathf.Max(0f, dashCooldown);

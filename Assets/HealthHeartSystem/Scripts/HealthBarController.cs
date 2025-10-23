@@ -5,75 +5,79 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-public class HealthBarController : MonoBehaviour
+namespace DungeonGenerator.Character
 {
-    private GameObject[] heartContainers;
-    private Image[] heartFills;
-
-    public Transform heartsParent;
-    public GameObject heartContainerPrefab;
-
-    private void Start()
+    public class HealthBarController : MonoBehaviour
     {
-        // Should I use lists? Maybe :)
-        heartContainers = new GameObject[(int)PlayerStats.Instance.MaxTotalHealth];
-        heartFills = new Image[(int)PlayerStats.Instance.MaxTotalHealth];
+        private GameObject[] heartContainers;
+        private Image[] heartFills;
 
-        PlayerStats.Instance.onHealthChangedCallback += UpdateHeartsHUD;
-        InstantiateHeartContainers();
-        UpdateHeartsHUD();
-    }
+        public Transform heartsParent;
+        public GameObject heartContainerPrefab;
 
-    public void UpdateHeartsHUD()
-    {
-        SetHeartContainers();
-        SetFilledHearts();
-    }
-
-    void SetHeartContainers()
-    {
-        for (int i = 0; i < heartContainers.Length; i++)
+        public void Start()
         {
-            if (i < PlayerStats.Instance.MaxHealth)
-            {
-                heartContainers[i].SetActive(true);
-            }
-            else
-            {
-                heartContainers[i].SetActive(false);
-            }
+            
+            // Should I use lists? Maybe :)
+            heartContainers = new GameObject[(int)PlayerStats.Instance.MaxTotalHealth];
+            heartFills = new Image[(int)PlayerStats.Instance.MaxTotalHealth];
+
+            PlayerStats.Instance.onHealthChangedCallback += UpdateHeartsHUD;
+            InstantiateHeartContainers();
+            UpdateHeartsHUD();
         }
-    }
 
-    void SetFilledHearts()
-    {
-        for (int i = 0; i < heartFills.Length; i++)
+        public void UpdateHeartsHUD()
         {
-            if (i < PlayerStats.Instance.Health)
+            SetHeartContainers();
+            SetFilledHearts();
+        }
+
+        void SetHeartContainers()
+        {
+            for (int i = 0; i < heartContainers.Length; i++)
             {
-                heartFills[i].fillAmount = 1;
-            }
-            else
-            {
-                heartFills[i].fillAmount = 0;
+                if (i < PlayerStats.Instance.MaxHealth)
+                {
+                    heartContainers[i].SetActive(true);
+                }
+                else
+                {
+                    heartContainers[i].SetActive(false);
+                }
             }
         }
 
-        if (PlayerStats.Instance.Health % 1 != 0)
+        void SetFilledHearts()
         {
-            int lastPos = Mathf.FloorToInt(PlayerStats.Instance.Health);
-            heartFills[lastPos].fillAmount = PlayerStats.Instance.Health % 1;
-        }
-    }
+            for (int i = 0; i < heartFills.Length; i++)
+            {
+                if (i < PlayerStats.Instance.Health)
+                {
+                    heartFills[i].fillAmount = 1;
+                }
+                else
+                {
+                    heartFills[i].fillAmount = 0;
+                }
+            }
 
-    void InstantiateHeartContainers()
-    {
-        for (int i = 0; i < PlayerStats.Instance.MaxTotalHealth; i++)
+            if (PlayerStats.Instance.Health % 1 != 0)
+            {
+                int lastPos = Mathf.FloorToInt(PlayerStats.Instance.Health);
+                heartFills[lastPos].fillAmount = PlayerStats.Instance.Health % 1;
+            }
+        }
+
+        void InstantiateHeartContainers()
         {
-            GameObject temp = Instantiate(heartContainerPrefab);
-            temp.transform.SetParent(heartsParent, false);
-            heartContainers[i] = temp;
-            heartFills[i] = temp.transform.Find("HeartFill").GetComponent<Image>();
+            for (int i = 0; i < PlayerStats.Instance.MaxTotalHealth; i++)
+            {
+                GameObject temp = Instantiate(heartContainerPrefab);
+                temp.transform.SetParent(heartsParent, false);
+                heartContainers[i] = temp;
+                heartFills[i] = temp.transform.Find("HeartFill").GetComponent<Image>();
+            }
         }
     }
 }

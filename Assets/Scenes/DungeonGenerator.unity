@@ -388,52 +388,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &332631918
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 332631920}
-  - component: {fileID: 332631919}
-  m_Layer: 0
-  m_Name: HealthBarController
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &332631919
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 332631918}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5c0f78e4acfe21a4594760304164796e, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  heartsParent: {fileID: 975229004}
-  heartContainerPrefab: {fileID: 1000013667988280, guid: 677e3f20f0ab76a45bd59d5b73b0b446, type: 3}
---- !u!4 &332631920
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 332631918}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &519420028
 GameObject:
   m_ObjectHideFlags: 0
@@ -754,7 +708,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   mapGenerator: {fileID: 1371193002}
   playerParent: {fileID: 255235800}
-  primaryPlayerPrefab: {fileID: 8076220598909356601, guid: 4281b1c96bdeb43d7a9c2bfb51ceecc9, type: 3}
+  primaryPlayerPrefab: {fileID: 4609648802464072355, guid: 48f134eb85d1540d7aaa89ebe452e881, type: 3}
 --- !u!4 &768669592
 Transform:
   m_ObjectHideFlags: 0
@@ -1592,6 +1546,5 @@ SceneRoots:
   - {fileID: 725286136}
   - {fileID: 768669592}
   - {fileID: 255235800}
-  - {fileID: 332631920}
   - {fileID: 1966340544}
   - {fileID: 1077051581}

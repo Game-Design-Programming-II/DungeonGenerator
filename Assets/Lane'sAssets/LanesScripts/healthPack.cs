@@ -7,7 +7,7 @@ public class healthPack : MonoBehaviour
     
     private void Start()
     {
-        playerstats = GetComponent<PlayerStats>();
+        playerstats.Instance.health;
         
     }
 
@@ -23,6 +23,5 @@ public class healthPack : MonoBehaviour
         
          }
         else
-             return;
-    }
+             
 }

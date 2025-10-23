@@ -3,17 +3,26 @@ using UnityEngine;
 public class healthPack : MonoBehaviour
 {
     [SerializeField] private GameObject heathpack;
+    PlayerStats playerstats;
+    
+    private void Start()
+    {
+        playerstats = GetComponent<PlayerStats>();
+        
+    }
+
     private void OnTriggerEnter(Collider other)
     {
 
-        /*
-        if (curPlayerhealth < maxplayerhealth && other.gameObject.tag == "Player")
+        
+        if (playerstats.health < playerstats.maxHealth && other.gameObject.tag == "Player")
         {
-            curPlayerhealth == maxplayerhealh;
+            playerstats.health == playerstats.maxHealth;
+            
             Destroy(this);
         
          }
         else
-             return;*/
+             return;
     }
 }

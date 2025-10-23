@@ -1662,12 +1662,12 @@ GameObject:
   - component: {fileID: 889946435}
   - component: {fileID: 889946434}
   m_Layer: 5
-  m_Name: Canvas (1)
+  m_Name: join loby
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &889946434
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2112,7 +2112,7 @@ GameObject:
   - component: {fileID: 1543531488}
   - component: {fileID: 1543531487}
   m_Layer: 5
-  m_Name: Canvas
+  m_Name: in lody
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

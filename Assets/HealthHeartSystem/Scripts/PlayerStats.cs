@@ -4,8 +4,6 @@
 
 using UnityEngine;
 
-namespace DungeonGenerator.Character
-{
     public class PlayerStats : MonoBehaviour
     {
         public delegate void OnHealthChangedDelegate();
@@ -67,4 +65,3 @@ namespace DungeonGenerator.Character
                 onHealthChangedCallback.Invoke();
         }
     }
-}

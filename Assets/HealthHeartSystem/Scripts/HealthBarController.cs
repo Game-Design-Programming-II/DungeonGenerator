@@ -5,8 +5,6 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace DungeonGenerator.Character
-{
     public class HealthBarController : MonoBehaviour
     {
         private GameObject[] heartContainers;
@@ -80,4 +78,3 @@ namespace DungeonGenerator.Character
             }
         }
     }
-}

@@ -233,28 +233,13 @@ namespace DungeonGenerator.Character
                 return;
             }
 
-            Vector2 inputDirection = moveInput;
-            Vector2 desiredDirection;
-
-            if (inputDirection.sqrMagnitude > 0.001f)
-            {
-                desiredDirection = TransformInputToWorld(inputDirection).normalized;
-            }
-            else if (lastMoveDirection.sqrMagnitude > 0.001f)
-            {
-                desiredDirection = lastMoveDirection.normalized;
-            }
-            else
-            {
-                desiredDirection = Vector2.up;
-            }
-
-            if (desiredDirection.sqrMagnitude < 0.001f)
+            Vector2 mouseDirection = GetMouseDirection();
+            if (mouseDirection.sqrMagnitude < 0.001f)
             {
                 return;
             }
 
-            dashDirection = desiredDirection.normalized;
+            dashDirection = mouseDirection.normalized;
             dashEndTime = Time.time + dashDuration;
             nextDashReadyTime = Time.time + dashCooldown;
             lastMoveDirection = dashDirection;
@@ -265,6 +250,29 @@ namespace DungeonGenerator.Character
         private InputAction TryGetAction(string actionName)
         {
             return playerInput.actions?.FindAction(actionName, throwIfNotFound: false);
+        }
+
+        private Vector2 GetMouseDirection()
+        {
+            if (CameraTransform == null)
+            {
+                return lastMoveDirection.sqrMagnitude > 0.001f ? lastMoveDirection : Vector2.up;
+            }
+
+            Vector3 mouseScreen = Mouse.current != null ? Mouse.current.position.ReadValue() : (Vector3)Input.mousePosition;
+            Vector3 worldPoint = CameraTransform.GetComponent<Camera>() != null
+                ? CameraTransform.GetComponent<Camera>().ScreenToWorldPoint(mouseScreen)
+                : Camera.main != null
+                    ? Camera.main.ScreenToWorldPoint(mouseScreen)
+                    : mouseScreen;
+
+            Vector2 direction = new Vector2(worldPoint.x - transform.position.x, worldPoint.y - transform.position.y);
+            if (direction.sqrMagnitude < 0.001f)
+            {
+                return lastMoveDirection.sqrMagnitude > 0.001f ? lastMoveDirection : Vector2.up;
+            }
+
+            return direction;
         }
 
 #if UNITY_EDITOR

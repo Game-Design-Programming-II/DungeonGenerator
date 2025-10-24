@@ -14,7 +14,7 @@ GameObject:
   - component: {fileID: 7016206523475529383}
   - component: {fileID: 6088495075702635795}
   - component: {fileID: 5631310528049065155}
-  m_Layer: 0
+  m_Layer: 10
   m_Name: troll
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -79,7 +79,7 @@ SpriteRenderer:
   m_LightmapParameters: {fileID: 0}
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 0
+  m_SortingOrder: 90
   m_Sprite: {fileID: 7482667652216324306, guid: 311925a002f4447b3a28927169b83ea6, type: 3}
   m_Color: {r: 0.6981132, g: 0.18770024, b: 0.18770024, a: 1}
   m_FlipX: 0

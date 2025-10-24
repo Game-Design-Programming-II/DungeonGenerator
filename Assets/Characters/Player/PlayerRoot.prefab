@@ -14,7 +14,7 @@ GameObject:
   - component: {fileID: 8043779374801913053}
   - component: {fileID: 141277055091740728}
   - component: {fileID: 7848601209464427915}
-  m_Layer: 0
+  m_Layer: 10
   m_Name: PlayerRoot
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -209,8 +209,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 47b65b6d16cfb47b98cf88a1c46504d6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  moveSpeed: 5
-  sprintMultiplier: 1.5
+  moveSpeed: 6.5
   dashDistance: 3
   dashDuration: 0.2
   dashCooldown: 0.75

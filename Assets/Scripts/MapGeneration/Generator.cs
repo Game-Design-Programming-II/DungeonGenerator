@@ -6,6 +6,7 @@ using System.Collections;
 using Delaunay;
 using UnityEngine.Serialization;
 using UnityEngine.Tilemaps;
+using DungeonGenerator.Character;
 
 namespace MapGeneration
 {
@@ -36,8 +37,19 @@ namespace MapGeneration
 
         [Header("Prop content (placeholder until WFC implemented)")] 
         [SerializeField, Range(0f, 1f)] private float _propScatterDensity = 0.08f;
-
         [SerializeField] private List<WeightedProp> _propSet = new List<WeightedProp>();
+        
+        [Header("Runtime Content Spawning")]
+        [SerializeField] private Transform _runtimeContentParent;
+        [SerializeField] private List<EnemySpawnConfig> _enemyTypes = new List<EnemySpawnConfig>();
+        [SerializeField] private Vector2Int _fallbackEnemyCount = new Vector2Int(1, 3);
+        [SerializeField, Range(0f, 1f)] private float _pickupScatterDensity = 0.1f;
+        [SerializeField] private List<GameObject> _pickupPrefabs = new List<GameObject>();
+        [SerializeField, Tooltip("Default player count to use for pressure plate puzzles if no runtime data is available.")]
+        private int _expectedPlayerCount = 1;
+        [SerializeField] private GameObject _spikeTrapPrefab;
+        [SerializeField, Range(0f, 1f)] private float _spikeTrapDensity = 0.25f;
+        [SerializeField] private GameObject _pressurePlatePrefab;
         
         [Header("Test Variables, remove later")]
         [SerializeField] private TileBase _doorTile;
@@ -66,10 +78,234 @@ namespace MapGeneration
         private List<Room> _gizmoRooms = new List<Room>();
         private List<Edge> _gizmoEdges = new List<Edge>();
         private List<Edge> _gizmoMST = new List<Edge>();
+        
+        private enum RoomContentRole
+        {
+            Combat,
+            Start,
+            End,
+            StartEnd,
+            SpikePuzzle,
+            PressurePuzzle
+        }
+
+        private struct RoomAssignment
+        {
+            public Room room;
+            public RoomGrid grid;
+            public RoomContentRole role;
+        }
 
         private void Start()
         {
             Generate();
+        }
+
+        // Paint decorative props onto the prop tilemap and reserve those tiles.
+        private void ScatterProps(RoomGrid grid, System.Random rng, HashSet<Vector2Int> blocked)
+        {
+            if (_propSet == null || _propSet.Count == 0 || _propScatterDensity <= 0f) return;
+
+            IRoomContentGenerator generator = new RandomScatterGenerator(_propScatterDensity);
+            List<Vector2Int> placements = generator.Generate(grid, rng);
+
+            foreach (Vector2Int cell in placements)
+            {
+                if (!grid.InBounds(cell.x, cell.y)) continue;
+                if (grid.Cells[cell.x, cell.y] != CellType.Floor) continue;
+
+                grid.Cells[cell.x, cell.y] = CellType.Prop;
+                blocked?.Add(cell);
+
+                Vector3Int world = grid.CellToWorld(cell.x, cell.y);
+                TileBase chosen = PickWeightedProp(rng);
+                if (chosen != null)
+                {
+                    _propMap.SetTile(world, chosen);
+                }
+            }
+        }
+
+        // Drop a single enemy type into the room using the configured count range.
+        private void SpawnEnemiesInRoom(RoomGrid grid, System.Random rng, HashSet<Vector2Int> blocked)
+        {
+            if (_enemyTypes == null || _enemyTypes.Count == 0) return;
+
+            EnemySpawnConfig config = _enemyTypes[rng.Next(_enemyTypes.Count)];
+            if (config == null || config.prefab == null)
+            {
+                Debug.LogWarning("[EnemySpawn] Missing enemy prefab configuration.");
+                return;
+            }
+
+            int spawnCount = SampleCount(config.countRange, _fallbackEnemyCount, rng);
+            if (spawnCount <= 0) return;
+
+            for (int i = 0; i < spawnCount; i++)
+            {
+                if (!TryGetRandomFloorCell(grid, rng, blocked, out Vector2Int cell))
+                {
+                    Debug.LogWarning("[EnemySpawn] Unable to find a free floor cell for enemy.");
+                    break;
+                }
+
+                SpawnPrefabAtCell(config.prefab, grid, cell);
+                blocked?.Add(cell);
+            }
+        }
+
+        // Distribute pick-up prefabs across floor tiles using a Bernoulli trial.
+        private void ScatterPickups(RoomGrid grid, System.Random rng, HashSet<Vector2Int> blocked)
+        {
+            if (_pickupPrefabs == null || _pickupPrefabs.Count == 0 || _pickupScatterDensity <= 0f) return;
+
+            int xMin = 1;
+            int xMax = grid.Width - 2;
+            int yMin = 1;
+            int yMax = grid.Height - 2;
+
+            for (int x = xMin; x <= xMax; x++)
+            {
+                for (int y = yMin; y <= yMax; y++)
+                {
+                    Vector2Int cell = new Vector2Int(x, y);
+                    if (!grid.InBounds(x, y)) continue;
+                    if (grid.Cells[x, y] != CellType.Floor) continue;
+                    if (blocked != null && blocked.Contains(cell)) continue;
+                    if (rng.NextDouble() > _pickupScatterDensity) continue;
+
+                    GameObject prefab = _pickupPrefabs[rng.Next(_pickupPrefabs.Count)];
+                    if (prefab == null) continue;
+
+                    SpawnPrefabAtCell(prefab, grid, cell);
+                    blocked?.Add(cell);
+                }
+            }
+        }
+
+        // Fill the room with spike hazards according to the configured density.
+        private void SpawnSpikeTraps(RoomGrid grid, System.Random rng, HashSet<Vector2Int> blocked)
+        {
+            if (_spikeTrapPrefab == null || _spikeTrapDensity <= 0f)
+            {
+                Debug.LogWarning("[SpikePuzzle] Spike trap prefab or density is missing.");
+                return;
+            }
+
+            int interiorWidth = Mathf.Max(0, grid.Width - 2);
+            int interiorHeight = Mathf.Max(0, grid.Height - 2);
+            int targetCount = Mathf.Max(1, Mathf.RoundToInt(interiorWidth * interiorHeight * _spikeTrapDensity));
+
+            for (int i = 0; i < targetCount; i++)
+            {
+                if (!TryGetRandomFloorCell(grid, rng, blocked, out Vector2Int cell))
+                {
+                    Debug.LogWarning("[SpikePuzzle] Unable to place all spike traps.");
+                    break;
+                }
+
+                grid.Cells[cell.x, cell.y] = CellType.Prop;
+                SpawnPrefabAtCell(_spikeTrapPrefab, grid, cell);
+                blocked?.Add(cell);
+            }
+        }
+
+        // Spawn one pressure plate per player (real or expected) in this room.
+        private void SpawnPressurePlates(RoomGrid grid, System.Random rng, HashSet<Vector2Int> blocked)
+        {
+            if (_pressurePlatePrefab == null)
+            {
+                Debug.LogWarning("[PressurePuzzle] Pressure plate prefab not assigned.");
+                return;
+            }
+
+            int plateCount = Mathf.Max(1, GetPlayerCountEstimate());
+
+            for (int i = 0; i < plateCount; i++)
+            {
+                if (!TryGetRandomFloorCell(grid, rng, blocked, out Vector2Int cell))
+                {
+                    Debug.LogWarning("[PressurePuzzle] Unable to place all pressure plates.");
+                    break;
+                }
+
+                grid.Cells[cell.x, cell.y] = CellType.Prop;
+                SpawnPrefabAtCell(_pressurePlatePrefab, grid, cell);
+                blocked?.Add(cell);
+            }
+        }
+
+        // Try to derive a live player count from the spawn controller, otherwise fallback.
+        private int GetPlayerCountEstimate()
+        {
+            PlayerSpawnController spawner = FindObjectOfType<PlayerSpawnController>();
+            if (spawner != null && spawner.SpawnedPlayers.Count > 0)
+            {
+                return spawner.SpawnedPlayers.Count;
+            }
+
+            return Mathf.Max(1, _expectedPlayerCount);
+        }
+
+        // Sample an inclusive count from the supplied range, clamping to fallback when invalid.
+        private int SampleCount(Vector2Int range, Vector2Int fallback, System.Random rng)
+        {
+            int min = range.x;
+            int max = range.y;
+            if (max < min)
+            {
+                min = fallback.x;
+                max = fallback.y;
+            }
+
+            min = Mathf.Max(0, min);
+            max = Mathf.Max(min, max);
+
+            return rng.Next(min, max + 1);
+        }
+
+        // Grab a random floor tile inside the room that is not reserved by previous placements.
+        private bool TryGetRandomFloorCell(RoomGrid grid, System.Random rng, HashSet<Vector2Int> blocked, out Vector2Int result)
+        {
+            result = default;
+            int attempts = Mathf.Max(64, grid.Width * grid.Height);
+
+            for (int i = 0; i < attempts; i++)
+            {
+                int x = rng.Next(1, Mathf.Max(2, grid.Width - 1));
+                int y = rng.Next(1, Mathf.Max(2, grid.Height - 1));
+                Vector2Int candidate = new Vector2Int(x, y);
+
+                if (!grid.InBounds(x, y)) continue;
+                if (grid.Cells[x, y] != CellType.Floor) continue;
+                if (blocked != null && blocked.Contains(candidate)) continue;
+
+                result = candidate;
+                return true;
+            }
+
+            return false;
+        }
+
+        // Instantiate a prefab at the centre of the requested room cell.
+        private void SpawnPrefabAtCell(GameObject prefab, RoomGrid grid, Vector2Int cell)
+        {
+            if (prefab == null) return;
+
+            Vector3 worldPos = GetCellCenterWorld(grid, cell);
+            Transform parent = _runtimeContentParent != null ? _runtimeContentParent : transform;
+            Instantiate(prefab, worldPos, Quaternion.identity, parent);
+        }
+
+        private Vector3 GetCellCenterWorld(RoomGrid grid, Vector2Int cell)
+        {
+            Vector3Int worldCell = grid.CellToWorld(cell.x, cell.y);
+            if (_floorMap != null)
+            {
+                return _floorMap.GetCellCenterWorld(worldCell);
+            }
+
+            return new Vector3(worldCell.x + 0.5f, worldCell.y + 0.5f, 0f);
         }
 
         public void Generate()
@@ -376,70 +612,60 @@ namespace MapGeneration
             if (_propMap != null) _propMap.ClearAllTiles();
 
             System.Random rng = new System.Random();
-            IRoomContentGenerator gen = new RandomScatterGenerator(_propScatterDensity);
 
-            // Choose Start/End rooms (from active grids) randomly
-            List<Room> activeRooms = new List<Room>(_roomGrids.Keys);
-            if (activeRooms.Count >= 2)
-            {
-                int idxStart = rng.Next(activeRooms.Count);
-                int idxEnd = rng.Next(activeRooms.Count - 1);
-                if (idxEnd >= idxStart) idxEnd++; // ensure distinct
-
-                _startRoom = activeRooms[idxStart];
-                _endRoom   = activeRooms[idxEnd];
-
-                // START
-                RoomGrid startRoomGrid = _roomGrids[_startRoom];
-                _startLocal = PickRandomInteriorFloor(startRoomGrid, rng);
-                _startWorld = startRoomGrid.CellToWorld(_startLocal.x, _startLocal.y);
-                startRoomGrid.Cells[_startLocal.x, _startLocal.y] = CellType.SpecialStart;
-                UpdatePlayerSpawnPoint(_startWorld);
-
-                // END
-                RoomGrid endRoomGrid = _roomGrids[_endRoom];
-                _endLocal = PickRandomInteriorFloor(endRoomGrid, rng);
-                _endWorld = endRoomGrid.CellToWorld(_endLocal.x, _endLocal.y);
-                endRoomGrid.Cells[_endLocal.x, _endLocal.y] = CellType.SpecialEnd;
-                if (_endTile != null) _propMap.SetTile(_endWorld, _endTile);
-                else Debug.LogWarning("[Start/End] _endTile not assigned; end marker will be invisible.");
-            }
-            else
-            {
-                _startRoom = _endRoom = null;
-                ClearPlayerSpawnPoint();
-                Debug.LogWarning("[Start/End] Fewer than 2 active rooms — skipping start/end placement.");
-            }
-
-            // --- Scatter normal props in all OTHER rooms only ---
+            List<RoomAssignment> activeAssignments = new List<RoomAssignment>();
             foreach (KeyValuePair<Room, RoomGrid> kv in _roomGrids)
             {
                 Room room = kv.Key;
-                if (room == _startRoom || room == _endRoom) continue; // skip start/end rooms
-
-                RoomGrid grid = kv.Value;
-                List<Vector2Int> localPlacements = gen.Generate(grid, rng); // returns local coords
-
-                foreach (Vector2Int p in localPlacements)
+                if (room == null || room.TurnedOff) continue;
+                activeAssignments.Add(new RoomAssignment
                 {
-                    if (!grid.InBounds(p.x, p.y)) continue;
-                    if (grid.Cells[p.x, p.y] != CellType.Floor) continue;
+                    room = room,
+                    grid = kv.Value,
+                    role = RoomContentRole.Combat
+                });
+            }
 
-                    // Mark logical grid and paint to PropMap
-                    grid.Cells[p.x, p.y] = CellType.Prop;
+            if (activeAssignments.Count == 0)
+            {
+                _startRoom = _endRoom = null;
+                ClearPlayerSpawnPoint();
+                Debug.LogWarning("[Content] No active rooms available for content generation.");
+                return;
+            }
 
-                    Vector3Int world = grid.CellToWorld(p.x, p.y);
-                    TileBase chosen = PickWeightedProp(rng); // from earlier step
-                    if (chosen != null) _propMap.SetTile(world, chosen);
+            List<RoomAssignment> assignments = BuildRoomAssignments(activeAssignments, rng);
+
+            foreach (RoomAssignment assignment in assignments)
+            {
+                switch (assignment.role)
+                {
+                    case RoomContentRole.Start:
+                        GenerateStartRoom(assignment, rng);
+                        break;
+                    case RoomContentRole.StartEnd:
+                        GenerateStartRoom(assignment, rng);
+                        GenerateEndRoom(assignment, rng);
+                        break;
+                    case RoomContentRole.End:
+                        GenerateEndRoom(assignment, rng);
+                        break;
+                    case RoomContentRole.SpikePuzzle:
+                        GenerateSpikeTrapRoom(assignment, rng);
+                        break;
+                    case RoomContentRole.PressurePuzzle:
+                        GeneratePressurePlateRoom(assignment, rng);
+                        break;
+                    default:
+                        GenerateCombatRoom(assignment, rng);
+                        break;
                 }
             }
 
-            // quick log so you can verify which rooms were selected and where
             if (_startRoom != null && _endRoom != null)
             {
-                Debug.Log($"[Start/End] Start at world {_startWorld} in room centered {_startRoom.Position}, End at world {_endWorld} in room centered {_endRoom.Position}");
+                Debug.Log($"[Content] Start at world {_startWorld} in room centered {_startRoom.Position}, End at world {_endWorld} in room centered {_endRoom.Position}");
             }
-            // Moved into MapGeneration folder to align structure with namespace.
         }
 
         private void ClearPlayerSpawnPoint()
@@ -477,6 +703,136 @@ namespace MapGeneration
             {
                 _wallComposite.GenerateGeometry();
             }
+        }
+
+        // Decide which rooms become start/end/puzzle/combat for this generation pass.
+        private List<RoomAssignment> BuildRoomAssignments(List<RoomAssignment> activeAssignments, System.Random rng)
+        {
+            List<RoomAssignment> assignments = new List<RoomAssignment>(activeAssignments);
+            int count = assignments.Count;
+
+            int startIndex = rng.Next(count);
+            RoomAssignment start = assignments[startIndex];
+            start.role = RoomContentRole.Start;
+            assignments[startIndex] = start;
+
+            List<int> availableIndices = new List<int>();
+            for (int i = 0; i < count; i++)
+            {
+                if (i != startIndex)
+                {
+                    availableIndices.Add(i);
+                }
+            }
+
+            if (availableIndices.Count > 0)
+            {
+                int endSelection = availableIndices[rng.Next(availableIndices.Count)];
+                RoomAssignment end = assignments[endSelection];
+                end.role = RoomContentRole.End;
+                assignments[endSelection] = end;
+                availableIndices.Remove(endSelection);
+            }
+            else
+            {
+                Debug.LogWarning("[Content] Only one room available; start and end will share the same space.");
+                RoomAssignment combined = assignments[startIndex];
+                combined.role = RoomContentRole.StartEnd;
+                assignments[startIndex] = combined;
+            }
+
+            List<RoomContentRole> puzzleQueue = new List<RoomContentRole>
+            {
+                RoomContentRole.SpikePuzzle,
+                RoomContentRole.PressurePuzzle
+            };
+
+            foreach (RoomContentRole puzzle in puzzleQueue)
+            {
+                if (availableIndices.Count == 0)
+                {
+                    Debug.LogWarning($"[Content] Not enough rooms to place puzzle type {puzzle}; skipping.");
+                    continue;
+                }
+
+                int pick = rng.Next(availableIndices.Count);
+                int roomIndex = availableIndices[pick];
+                RoomAssignment puzzleAssignment = assignments[roomIndex];
+                puzzleAssignment.role = puzzle;
+                assignments[roomIndex] = puzzleAssignment;
+                availableIndices.RemoveAt(pick);
+            }
+
+            return assignments;
+        }
+
+        // Place the player spawn point and any starter pickups.
+        private void GenerateStartRoom(RoomAssignment assignment, System.Random rng)
+        {
+            _startRoom = assignment.room;
+            RoomGrid grid = assignment.grid;
+
+            _startLocal = PickRandomInteriorFloor(grid, rng);
+            _startWorld = grid.CellToWorld(_startLocal.x, _startLocal.y);
+            grid.Cells[_startLocal.x, _startLocal.y] = CellType.SpecialStart;
+            UpdatePlayerSpawnPoint(_startWorld);
+
+            HashSet<Vector2Int> blocked = new HashSet<Vector2Int> { _startLocal };
+            ScatterPickups(grid, rng, blocked);
+        }
+
+        // Place the dungeon exit marker and optional pickups.
+        private void GenerateEndRoom(RoomAssignment assignment, System.Random rng)
+        {
+            _endRoom = assignment.room;
+            RoomGrid grid = assignment.grid;
+
+            _endLocal = PickRandomInteriorFloor(grid, rng);
+            _endWorld = grid.CellToWorld(_endLocal.x, _endLocal.y);
+            grid.Cells[_endLocal.x, _endLocal.y] = CellType.SpecialEnd;
+
+            if (_endTile != null)
+            {
+                _propMap.SetTile(_endWorld, _endTile);
+            }
+            else
+            {
+                Debug.LogWarning("[EndRoom] _endTile not assigned; end marker will be invisible.");
+            }
+
+            HashSet<Vector2Int> blocked = new HashSet<Vector2Int> { _endLocal };
+            ScatterPickups(grid, rng, blocked);
+        }
+
+        // Default room: props, one enemy type, and a sprinkle of pickups.
+        private void GenerateCombatRoom(RoomAssignment assignment, System.Random rng)
+        {
+            RoomGrid grid = assignment.grid;
+            HashSet<Vector2Int> blocked = new HashSet<Vector2Int>();
+
+            ScatterProps(grid, rng, blocked);
+            SpawnEnemiesInRoom(grid, rng, blocked);
+            ScatterPickups(grid, rng, blocked);
+        }
+
+        // Puzzle room filled with spike traps; behaves differently from combat rooms.
+        private void GenerateSpikeTrapRoom(RoomAssignment assignment, System.Random rng)
+        {
+            RoomGrid grid = assignment.grid;
+            HashSet<Vector2Int> blocked = new HashSet<Vector2Int>();
+
+            SpawnSpikeTraps(grid, rng, blocked);
+            ScatterPickups(grid, rng, blocked);
+        }
+
+        // Puzzle room that spawns a pressure plate per player.
+        private void GeneratePressurePlateRoom(RoomAssignment assignment, System.Random rng)
+        {
+            RoomGrid grid = assignment.grid;
+            HashSet<Vector2Int> blocked = new HashSet<Vector2Int>();
+
+            SpawnPressurePlates(grid, rng, blocked);
+            ScatterPickups(grid, rng, blocked);
         }
 
 
@@ -951,6 +1307,17 @@ namespace MapGeneration
         
         public Vector2Int WorldToCell(Vector3Int world) =>
             new Vector2Int(world.x - Origin.x, world.y - Origin.y);
+    }
+
+    [System.Serializable]
+    public class EnemySpawnConfig
+    {
+        [Tooltip("Friendly identifier used by designers to recognise this enemy entry.")]
+        public string id = "Enemy";
+        [Tooltip("Prefab that will be instantiated when this entry is picked.")]
+        public GameObject prefab;
+        [Tooltip("Inclusive range for how many instances of this enemy to spawn in a room.")]
+        public Vector2Int countRange = new Vector2Int(1, 3);
     }
 
     [System.Serializable]

@@ -10,8 +10,8 @@ public class SpikeTrap : MonoBehaviour
     {
         if(collision.tag == "Player")
         {
-            _anim.Play("SpikeTrap");
-            collision.TakeDamage(_damage);
+            _anim.SetBool("active", true);
+            collision.GetComponent<PlayerStats>().TakeDamage(_damage);
         }
     }
 }

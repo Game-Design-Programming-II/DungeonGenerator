@@ -96,9 +96,20 @@ namespace MapGeneration
             public RoomContentRole role;
         }
 
+        // Health Bar Controller
+        public GameObject healthBarController;
+
         private void Start()
         {
-            Generate();
+            //Generate();
+        }
+
+        private void Update()
+        {
+            if (Input.GetKeyDown(KeyCode.Tab))
+            {
+                Generate();
+            }
         }
 
         // Paint decorative props onto the prop tilemap and reserve those tiles.

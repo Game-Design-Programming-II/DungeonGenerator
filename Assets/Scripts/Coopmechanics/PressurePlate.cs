@@ -4,7 +4,9 @@ using UnityEngine.Events;
 [RequireComponent(typeof(Collider2D))]
 public class PressurePlate : MonoBehaviour
 {
+    //add pressureplatemanager to OnPressed, then click on OnPlateStateChanged
     public UnityEvent OnPressed;
+    //add pressureplatemanager to OnReleased, then click on OnPlateStateChanged
     public UnityEvent OnReleased;
 
     private int playersOnPlate = 0;

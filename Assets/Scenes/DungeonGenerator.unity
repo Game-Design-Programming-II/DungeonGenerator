@@ -1219,7 +1219,7 @@ MonoBehaviour:
     weight: 0.5
   _runtimeContentParent: {fileID: 1629916193}
   _enemyTypes:
-  - id: 
+  - id: Troll
     prefab: {fileID: 5716440746491455975, guid: 4cae7afb1096b4796a4488ef8951c076, type: 3}
     countRange: {x: 2, y: 5}
   _fallbackEnemyCount: {x: 1, y: 3}

@@ -655,6 +655,7 @@ namespace MapGeneration
                         GenerateStartRoom(assignment, rng);
                         break;
                     case RoomContentRole.StartEnd:
+                        Debug.LogWarning("[Content] Start and end rooms are the same; likely only one room available.");
                         GenerateStartRoom(assignment, rng);
                         GenerateEndRoom(assignment, rng);
                         break;
@@ -719,14 +720,17 @@ namespace MapGeneration
         // Decide which rooms become start/end/puzzle/combat for this generation pass.
         private List<RoomAssignment> BuildRoomAssignments(List<RoomAssignment> activeAssignments, System.Random rng)
         {
+            // Copy the incoming list so we never mutate the original collection.
             List<RoomAssignment> assignments = new List<RoomAssignment>(activeAssignments);
             int count = assignments.Count;
 
+            // Randomly pick a room to become the player start.
             int startIndex = rng.Next(count);
             RoomAssignment start = assignments[startIndex];
             start.role = RoomContentRole.Start;
             assignments[startIndex] = start;
 
+            // Build a set of indices we can still allocate to other roles.
             List<int> availableIndices = new List<int>();
             for (int i = 0; i < count; i++)
             {
@@ -736,6 +740,7 @@ namespace MapGeneration
                 }
             }
 
+            // Pick a separate room for the exit if possible.
             if (availableIndices.Count > 0)
             {
                 int endSelection = availableIndices[rng.Next(availableIndices.Count)];
@@ -746,12 +751,14 @@ namespace MapGeneration
             }
             else
             {
+                // Single-room dungeon; the start doubles as the end.
                 Debug.LogWarning("[Content] Only one room available; start and end will share the same space.");
                 RoomAssignment combined = assignments[startIndex];
                 combined.role = RoomContentRole.StartEnd;
                 assignments[startIndex] = combined;
             }
 
+            // add future puzzles to this queue
             List<RoomContentRole> puzzleQueue = new List<RoomContentRole>
             {
                 RoomContentRole.SpikePuzzle,
@@ -772,6 +779,8 @@ namespace MapGeneration
                 puzzleAssignment.role = puzzle;
                 assignments[roomIndex] = puzzleAssignment;
                 availableIndices.RemoveAt(pick);
+
+                Debug.Log($"[Content] Assigned room index {roomIndex} to {puzzle}.");
             }
 
             return assignments;
@@ -839,9 +848,10 @@ namespace MapGeneration
         // Puzzle room that spawns a pressure plate per player.
         private void GeneratePressurePlateRoom(RoomAssignment assignment, System.Random rng)
         {
+            Debug.Log("[GeneratePressurePlateRoom] Generating room...");
             RoomGrid grid = assignment.grid;
             HashSet<Vector2Int> blocked = new HashSet<Vector2Int>();
-
+            
             SpawnPressurePlates(grid, rng, blocked);
             ScatterPickups(grid, rng, blocked);
         }

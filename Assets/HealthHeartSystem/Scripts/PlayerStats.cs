@@ -9,7 +9,7 @@ public class PlayerStats : MonoBehaviour
     public delegate void OnHealthChangedDelegate();
     public OnHealthChangedDelegate onHealthChangedCallback;
 
-    #region Singleton
+    #region Sigleton
     private static PlayerStats instance;
     public static PlayerStats Instance
     {
@@ -23,17 +23,18 @@ public class PlayerStats : MonoBehaviour
     #endregion
 
     [SerializeField]
-    public float health;
+    private float health;
     [SerializeField]
-    public float maxHealth;
+    private float maxHealth;
     [SerializeField]
     private float maxTotalHealth;
+    [SerializeField]
+    private bool hasKey;
 
-    public float gethealth() { return health; }
-    public float getMaxHealth() { return maxHealth; }
     public float Health { get { return health; } }
     public float MaxHealth { get { return maxHealth; } }
     public float MaxTotalHealth { get { return maxTotalHealth; } }
+    public bool HasKey { get { return hasKey; } }
 
     public void Heal(float health)
     {
@@ -56,7 +57,7 @@ public class PlayerStats : MonoBehaviour
 
             if (onHealthChangedCallback != null)
                 onHealthChangedCallback.Invoke();
-        }
+        }   
     }
 
     void ClampHealth()
@@ -65,5 +66,10 @@ public class PlayerStats : MonoBehaviour
 
         if (onHealthChangedCallback != null)
             onHealthChangedCallback.Invoke();
+    }
+
+    public void Key(bool change)
+    {
+        hasKey = change;
     }
 }

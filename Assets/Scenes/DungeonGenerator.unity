@@ -541,7 +541,7 @@ Camera:
   far clip plane: 1000
   field of view: 34
   orthographic: 1
-  orthographic size: 20
+  orthographic size: 10
   m_Depth: -1
   m_CullingMask:
     serializedVersion: 2
@@ -755,7 +755,7 @@ MonoBehaviour:
   mapGenerator: {fileID: 1371193002}
   _healthBarController: {fileID: 2136507}
   playerParent: {fileID: 255235800}
-  primaryPlayerPrefab: {fileID: 4609648802464072355, guid: 48f134eb85d1540d7aaa89ebe452e881, type: 3}
+  primaryPlayerPrefab: {fileID: 8076220598909356601, guid: 48f134eb85d1540d7aaa89ebe452e881, type: 3}
 --- !u!4 &768669592
 Transform:
   m_ObjectHideFlags: 0
@@ -1202,8 +1202,8 @@ MonoBehaviour:
   _floorMap: {fileID: 1066297806}
   _wallMap: {fileID: 228086546}
   _propMap: {fileID: 1942348628}
-  _wallCollider: {fileID: 0}
-  _wallComposite: {fileID: 0}
+  _wallCollider: {fileID: 228086547}
+  _wallComposite: {fileID: 228086548}
   _floorTile: {fileID: 11400000, guid: 5808421d105704a72a11f89e5b7d3efa, type: 2}
   _wallTile: {fileID: 11400000, guid: 94cf6d2f85f314cb8818f00bf44f9d16, type: 2}
   _endTile: {fileID: 11400000, guid: ac63da5f6ed3d4e08a720d06b161ddb7, type: 2}
@@ -1217,6 +1217,19 @@ MonoBehaviour:
     weight: 1
   - tile: {fileID: 11400000, guid: 602c7089d40d84786a6e0739b59affa9, type: 2}
     weight: 0.5
+  _runtimeContentParent: {fileID: 1629916193}
+  _enemyTypes:
+  - id: Troll
+    prefab: {fileID: 5716440746491455975, guid: 4cae7afb1096b4796a4488ef8951c076, type: 3}
+    countRange: {x: 2, y: 5}
+  _fallbackEnemyCount: {x: 1, y: 3}
+  _pickupScatterDensity: 0.1
+  _pickupPrefabs:
+  - {fileID: 1787059138744807743, guid: 8b9a9d9763a604d47acd5b4b299f0aec, type: 3}
+  _expectedPlayerCount: 1
+  _spikeTrapPrefab: {fileID: 7965784340935701847, guid: 02b5f1f5677d148c6b4edeaabbe444dd, type: 3}
+  _spikeTrapDensity: 0.25
+  _pressurePlatePrefab: {fileID: 5125463752471852338, guid: 1e14663a2e8d94a9683e8b9104f32250, type: 3}
   _doorTile: {fileID: 11400000, guid: 49645ad6b49a64f96b480f961bf4eb7a, type: 2}
   _aStarTile: {fileID: 11400000, guid: fda4023edd94a47909d4e924ebc0cf51, type: 2}
   _debugMap: {fileID: 1048886281}
@@ -1359,6 +1372,37 @@ Tilemap:
     e31: 0
     e32: 0
     e33: 1
+--- !u!1 &1629916192
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1629916193}
+  m_Layer: 0
+  m_Name: Runtime Content
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1629916193
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1629916192}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1942348625
 GameObject:
   m_ObjectHideFlags: 0
@@ -1597,3 +1641,4 @@ SceneRoots:
   - {fileID: 255235800}
   - {fileID: 1966340544}
   - {fileID: 1077051581}
+  - {fileID: 1629916193}

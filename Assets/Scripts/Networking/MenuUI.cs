@@ -1,3 +1,4 @@
+using Networking;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -18,6 +19,9 @@ public class MenuUI : MonoBehaviourPunCallbacks
     [Header("Lobby Screen")]
     public TextMeshProUGUI playerListText;
     public Button startGameButton;
+    
+    [Header("Scene References")]
+    public string sceneName;
 
     void Start()
     {
@@ -92,9 +96,10 @@ public class MenuUI : MonoBehaviourPunCallbacks
         SetScreen(mainScreen);
     }
 
-    public void StartGameButton()
-    {
-        NetworkManager.instance.photonView.RPC("ChangeScene",
-            RpcTarget.All, "Gameplay");
+        public void StartGameButton()
+        {
+            NetworkManager.instance.photonView.RPC("ChangeScene",
+                RpcTarget.All, sceneName);
+            MultiplayerGameManager.Instance?.photonView.RPC("BeginMatch", RpcTarget.AllBuffered);
+        }
     }
-}

@@ -101,7 +101,7 @@ namespace MapGeneration
 
         private void Start()
         {
-            //Generate();
+            Generate();
         }
 
         private void Update()
@@ -249,7 +249,7 @@ namespace MapGeneration
         // Try to derive a live player count from the spawn controller, otherwise fallback.
         private int GetPlayerCountEstimate()
         {
-            PlayerSpawnController spawner = FindObjectOfType<PlayerSpawnController>();
+            PlayerSpawnController spawner = FindAnyObjectByType<PlayerSpawnController>();
             if (spawner != null && spawner.SpawnedPlayers.Count > 0)
             {
                 return spawner.SpawnedPlayers.Count;

@@ -1,7 +1,9 @@
 using System.Collections.Generic;
 using MapGeneration;
 using Photon.Pun;
+using Photon.Realtime;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace Networking
 {
@@ -10,6 +12,7 @@ namespace Networking
     /// Responsible for instantiating the local player once Photon is connected
     /// and relaying spawn positions supplied by the dungeon generator.
     /// </summary>
+    [RequireComponent(typeof(PhotonView))]
     public class MultiplayerGameManager : MonoBehaviourPunCallbacks
     {
         public static MultiplayerGameManager Instance { get; private set; }
@@ -27,6 +30,8 @@ namespace Networking
         private bool localPlayerSpawned;
         private bool lobbyStartedGame;
 
+        private PhotonView cachedView;
+
         private void Awake()
         {
             if (Instance != null && Instance != this)
@@ -37,20 +42,30 @@ namespace Networking
 
             Instance = this;
             DontDestroyOnLoad(gameObject);
+            cachedView = GetComponent<PhotonView>();
+            if (cachedView == null)
+            {
+                cachedView = gameObject.AddComponent<PhotonView>();
+            }
+
+            if (cachedView.ViewID == 0)
+            {
+                cachedView.ViewID = 1001;
+            }
+            cachedView.OwnershipTransfer = OwnershipOption.Fixed;
 
             PhotonNetwork.AutomaticallySyncScene = true;
         }
 
         private void OnEnable()
         {
-            if (generator != null)
-            {
-                generator.PlayerSpawnPointUpdated += HandleSpawnPointUpdated;
-            }
+            SceneManager.sceneLoaded += OnSceneLoaded;
+            HookGeneratorIfNeeded();
         }
 
         private void OnDisable()
         {
+            SceneManager.sceneLoaded -= OnSceneLoaded;
             if (generator != null)
             {
                 generator.PlayerSpawnPointUpdated -= HandleSpawnPointUpdated;
@@ -94,6 +109,11 @@ namespace Networking
         public void BeginMatch()
         {
             lobbyStartedGame = true;
+            Debug.Log("[Multiplayer] BeginMatch RPC received.");
+            if (PhotonNetwork.IsMasterClient)
+            {
+                HookGeneratorIfNeeded();
+            }
             TrySpawnLocalPlayer();
         }
 
@@ -112,6 +132,38 @@ namespace Networking
             if (playerInstances.TryGetValue(actorNumber, out GameObject existing) && existing == playerObject)
             {
                 playerInstances.Remove(actorNumber);
+            }
+        }
+
+        private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+        {
+            Debug.Log($"[Multiplayer] Scene loaded: {scene.name}. Hooking generator...");
+            HookGeneratorIfNeeded();
+        }
+
+        private void HookGeneratorIfNeeded()
+        {
+            if (generator != null)
+            {
+                generator.PlayerSpawnPointUpdated -= HandleSpawnPointUpdated;
+            }
+
+            if (generator == null)
+            {
+                generator = FindAnyObjectByType<Generator>();
+            }
+
+            if (generator != null)
+            {
+                generator.PlayerSpawnPointUpdated -= HandleSpawnPointUpdated;
+                generator.PlayerSpawnPointUpdated += HandleSpawnPointUpdated;
+
+                Debug.Log("[Multiplayer] Generator found and event hooked.");
+                if (generator.HasPlayerSpawn)
+                {
+                    Debug.Log("[Multiplayer] Generator already has a spawn point; using cached value.");
+                    HandleSpawnPointUpdated(generator.PlayerSpawnWorldPosition);
+                }
             }
         }
     }

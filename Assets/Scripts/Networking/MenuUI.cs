@@ -6,6 +6,7 @@ using Photon.Pun;
 using Photon.Realtime;
 using Unity.VisualScripting;
 
+[RequireComponent(typeof(PhotonView))]
 public class MenuUI : MonoBehaviourPunCallbacks
 {
     [Header("Screens")]
@@ -23,8 +24,20 @@ public class MenuUI : MonoBehaviourPunCallbacks
     [Header("Scene References")]
     public string sceneName;
 
+    private PhotonView cachedView;
+
     void Start()
     {
+        cachedView = GetComponent<PhotonView>();
+        if (cachedView == null)
+        {
+            cachedView = gameObject.AddComponent<PhotonView>();
+        }
+        if (cachedView.ViewID == 0)
+        {
+            cachedView.ViewID = 1002;
+        }
+
         createRoomButton.interactable = false;
         joinRoomButton.interactable = false;
     }
@@ -81,7 +94,10 @@ public class MenuUI : MonoBehaviourPunCallbacks
     {
         //base.OnJoinedRoom();
         SetScreen(lobbyScreen);
-        photonView.RPC("UpdateLobbyUI", RpcTarget.All);
+        if (cachedView != null)
+        {
+            cachedView.RPC("UpdateLobbyUI", RpcTarget.All);
+        }
     }
 
     public override void OnPlayerLeftRoom(Player otherPlayer)
@@ -96,10 +112,26 @@ public class MenuUI : MonoBehaviourPunCallbacks
         SetScreen(mainScreen);
     }
 
-        public void StartGameButton()
+    public void StartGameButton()
+    {
+        if (string.IsNullOrEmpty(sceneName))
         {
-            NetworkManager.instance.photonView.RPC("ChangeScene",
-                RpcTarget.All, sceneName);
-            MultiplayerGameManager.Instance?.photonView.RPC("BeginMatch", RpcTarget.AllBuffered);
+            Debug.LogError("[MenuUI] Scene name not assigned for StartGameButton.");
+            return;
         }
+
+        PhotonView networkView = NetworkManager.instance?.photonView;
+        PhotonView gameManagerView = MultiplayerGameManager.Instance?.photonView;
+
+        if (networkView == null || gameManagerView == null)
+        {
+            if (networkView == null) Debug.LogError("[MenuUI] NetworkManager PhotonView not found.");
+            if (gameManagerView == null) Debug.LogError("[MenuUI] MultiplayerGameManager PhotonView not found.");
+            Debug.LogError("[MenuUI] Unable to locate NetworkManager or MultiplayerGameManager PhotonViews; aborting StartGame.");
+            return;
+        }
+
+        networkView.RPC("ChangeScene", RpcTarget.All, sceneName);
+        gameManagerView.RPC("BeginMatch", RpcTarget.AllBuffered);
     }
+}

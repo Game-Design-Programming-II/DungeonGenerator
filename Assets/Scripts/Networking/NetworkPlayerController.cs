@@ -49,7 +49,8 @@ namespace Networking
 
             if (body != null)
             {
-                body.isKinematic = !isMine;
+                // body.isKinematic = !isMine;
+                body.bodyType = isMine ? RigidbodyType2D.Dynamic : RigidbodyType2D.Kinematic;
             }
 
             MultiplayerGameManager.Instance?.RegisterPlayerInstance(photonView.OwnerActorNr, gameObject);

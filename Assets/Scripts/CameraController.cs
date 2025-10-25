@@ -27,7 +27,7 @@ public class CameraController : MonoBehaviour
     {
         if (spawnController == null)
         {
-            spawnController = FindObjectOfType<PlayerSpawnController>();
+            spawnController = FindAnyObjectByType<PlayerSpawnController>();
         }
 
         if (spawnController != null)

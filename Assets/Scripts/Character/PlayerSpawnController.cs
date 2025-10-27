@@ -13,6 +13,10 @@ namespace DungeonGenerator.Character
     public class PlayerSpawnController : MonoBehaviour
     {
         [SerializeField] private Generator mapGenerator;
+
+        // Reference to the Health Bar Controller
+        [SerializeField] private HealthBarController _healthBarController;
+        
         [SerializeField] private Transform playerParent;
         [SerializeField, Tooltip("Initial player prefab to spawn when the map finishes generating.")]
         private GameObject primaryPlayerPrefab;
@@ -52,6 +56,9 @@ namespace DungeonGenerator.Character
             hasSpawnPoint = true;
             lastSpawnPoint = spawnPoint;
             SpawnPlayers();
+
+            // Generates the health display once a player has been spawned
+            _healthBarController.GenerateHealthDisplay();
         }
 
         private void SpawnPlayers()

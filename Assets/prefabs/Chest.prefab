@@ -148,3 +148,4 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _openSprite: {fileID: 2322430220157786358, guid: 0a14c2b21e6fc5b4d915203012e9f427, type: 3}
+  _canvas: {fileID: 167897607962136328, guid: b79d8f0cf578c5a4689c6450add60d0e, type: 3}

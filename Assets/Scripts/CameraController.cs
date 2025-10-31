@@ -1,4 +1,6 @@
 using DungeonGenerator.Character;
+using Networking;
+using Photon.Pun;
 using UnityEngine;
 
 public class CameraController : MonoBehaviour
@@ -43,6 +45,15 @@ public class CameraController : MonoBehaviour
             }
         }
 
+        // Also listen for network-spawned local player (multiplayer flow)
+        if (MultiplayerGameManager.Instance != null)
+        {
+            MultiplayerGameManager.Instance.LocalPlayerSpawned += OnPlayerSpawned;
+        }
+
+        // Try to immediately target an already-spawned local network player
+        TrySetLocalNetworkPlayerAsTarget();
+
         if (manualTarget != null)
         {
             SetFollowTarget(manualTarget);
@@ -65,6 +76,11 @@ public class CameraController : MonoBehaviour
         {
             spawnController.PlayerSpawned -= OnPlayerSpawned;
         }
+
+        if (MultiplayerGameManager.Instance != null)
+        {
+            MultiplayerGameManager.Instance.LocalPlayerSpawned -= OnPlayerSpawned;
+        }
     }
 
     private void OnPlayerSpawned(GameObject player)
@@ -85,6 +101,20 @@ public class CameraController : MonoBehaviour
             transform.position = desiredPosition;
             currentMouseOffset = Vector3.zero;
             followVelocity = Vector3.zero;
+        }
+    }
+
+    private void TrySetLocalNetworkPlayerAsTarget()
+    {
+        // Find a locally-owned network player and follow it.
+        NetworkPlayerController[] players = FindObjectsOfType<NetworkPlayerController>();
+        foreach (var npc in players)
+        {
+            if (npc != null && npc.photonView != null && npc.photonView.IsMine)
+            {
+                SetFollowTarget(npc.transform);
+                return;
+            }
         }
     }
 

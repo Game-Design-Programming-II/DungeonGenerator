@@ -19,7 +19,7 @@ namespace Networking
 
         [Header("Player Prefab")]
         [Tooltip("Resource path used with PhotonNetwork.Instantiate. Prefab must live under a Resources folder.")]
-        [SerializeField] private string networkPlayerPrefabPath = "Characters/Player";
+        [SerializeField] private string networkPlayerPrefabPath = "Characters/Player/BasePlayer";
 
         [Header("Spawn Sources")]
         [Tooltip("Optional reference so we can listen for procedural spawn updates from the dungeon generator.")]
@@ -31,6 +31,9 @@ namespace Networking
         private bool lobbyStartedGame;
 
         private PhotonView cachedView;
+
+        // Raised after the local network player object is instantiated.
+        public event System.Action<GameObject> LocalPlayerSpawned;
 
         private void Awake()
         {
@@ -103,6 +106,16 @@ namespace Networking
             GameObject playerObject = PhotonNetwork.Instantiate(networkPlayerPrefabPath, spawnPosition, Quaternion.identity);
             RegisterPlayerInstance(PhotonNetwork.LocalPlayer.ActorNumber, playerObject);
             localPlayerSpawned = true;
+
+            // Notify listeners (camera, UI, etc.) that our local player exists.
+            try
+            {
+                LocalPlayerSpawned?.Invoke(playerObject);
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"[Multiplayer] Error notifying LocalPlayerSpawned: {ex.Message}");
+            }
         }
 
         [PunRPC]

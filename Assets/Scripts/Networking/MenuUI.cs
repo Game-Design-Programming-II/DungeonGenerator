@@ -71,13 +71,12 @@ public class MenuUI : MonoBehaviourPunCallbacks
         PhotonNetwork.NickName = playerNameInput.text;
     }
 
-    [PunRPC]
     public void UpdateLobbyUI()
     {
         playerListText.text = "";
         foreach (Player player in PhotonNetwork.PlayerList)
         {
-            playerListText.text += player.NickName + "\n";
+            playerListText.text += $"{player.ActorNumber} : {player.NickName}\n";
         }
 
         if (PhotonNetwork.IsMasterClient)
@@ -94,15 +93,24 @@ public class MenuUI : MonoBehaviourPunCallbacks
     {
         //base.OnJoinedRoom();
         SetScreen(lobbyScreen);
-        if (cachedView != null)
-        {
-            cachedView.RPC("UpdateLobbyUI", RpcTarget.All);
-        }
+        UpdateLobbyUI();
+    }
+
+    public override void OnPlayerEnteredRoom(Player newPlayer)
+    {
+        // Refresh lobby list when someone joins
+        UpdateLobbyUI();
     }
 
     public override void OnPlayerLeftRoom(Player otherPlayer)
     {
         //base.OnPlayerLeftRoom(otherPlayer);
+        UpdateLobbyUI();
+    }
+
+    public override void OnMasterClientSwitched(Player newMasterClient)
+    {
+        // Update start button interactable state
         UpdateLobbyUI();
     }
 
@@ -120,18 +128,24 @@ public class MenuUI : MonoBehaviourPunCallbacks
             return;
         }
 
-        PhotonView networkView = NetworkManager.instance?.photonView;
-        PhotonView gameManagerView = MultiplayerGameManager.Instance?.photonView;
-
-        if (networkView == null || gameManagerView == null)
+        if (!PhotonNetwork.IsMasterClient)
         {
-            if (networkView == null) Debug.LogError("[MenuUI] NetworkManager PhotonView not found.");
-            if (gameManagerView == null) Debug.LogError("[MenuUI] MultiplayerGameManager PhotonView not found.");
-            Debug.LogError("[MenuUI] Unable to locate NetworkManager or MultiplayerGameManager PhotonViews; aborting StartGame.");
+            Debug.LogWarning("[MenuUI] StartGame pressed by non-master; ignoring.");
             return;
         }
 
-        networkView.RPC("ChangeScene", RpcTarget.All, sceneName);
-        gameManagerView.RPC("BeginMatch", RpcTarget.AllBuffered);
+        // Master loads the scene; AutomaticallySyncScene will move all clients.
+        PhotonNetwork.LoadLevel(sceneName);
+
+        // Signal match start to all clients (buffered for late-joiners).
+        PhotonView gameManagerView = MultiplayerGameManager.Instance?.photonView;
+        if (gameManagerView != null)
+        {
+            gameManagerView.RPC("BeginMatch", RpcTarget.AllBuffered);
+        }
+        else
+        {
+            Debug.LogError("[MenuUI] MultiplayerGameManager PhotonView not found; BeginMatch not sent.");
+        }
     }
 }

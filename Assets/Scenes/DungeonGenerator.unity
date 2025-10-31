@@ -718,7 +718,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 13f4b24c2f2f4db6b3c7c9a5a8b2b4a1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  networkPlayerPrefabPath: Characters/Player
+  networkPlayerPrefabPath: Characters/Player/BasePlayer
   generator: {fileID: 1371193002}
 --- !u!1 &725286134
 GameObject:

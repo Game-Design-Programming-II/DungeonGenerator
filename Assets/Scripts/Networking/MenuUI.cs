@@ -134,14 +134,17 @@ public class MenuUI : MonoBehaviourPunCallbacks
             return;
         }
 
+        // Create a deterministic seed for this match
+        int seed = (int)(System.DateTime.UtcNow.Ticks & 0x7FFFFFFF);
+
         // Master loads the scene; AutomaticallySyncScene will move all clients.
         PhotonNetwork.LoadLevel(sceneName);
 
-        // Signal match start to all clients (buffered for late-joiners).
+        // Signal match start to all clients (buffered for late-joiners) with the shared seed.
         PhotonView gameManagerView = MultiplayerGameManager.Instance?.photonView;
         if (gameManagerView != null)
         {
-            gameManagerView.RPC("BeginMatch", RpcTarget.AllBuffered);
+            gameManagerView.RPC("BeginMatch", RpcTarget.AllBuffered, seed);
         }
         else
         {

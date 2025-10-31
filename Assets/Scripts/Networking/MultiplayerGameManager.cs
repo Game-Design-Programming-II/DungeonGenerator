@@ -29,6 +29,8 @@ namespace Networking
         private Vector3? lastKnownSpawnPoint;
         private bool localPlayerSpawned;
         private bool lobbyStartedGame;
+        private int matchSeed;
+        private bool hasSeed;
 
         private PhotonView cachedView;
 
@@ -119,13 +121,28 @@ namespace Networking
         }
 
         [PunRPC]
-        public void BeginMatch()
+        public void BeginMatch(int seed)
         {
             lobbyStartedGame = true;
+            matchSeed = seed;
+            hasSeed = true;
             Debug.Log("[Multiplayer] BeginMatch RPC received.");
             if (PhotonNetwork.IsMasterClient)
             {
                 HookGeneratorIfNeeded();
+            }
+
+            // If we have a generator in the active scene, kick off generation with the shared seed.
+            if (generator != null)
+            {
+                try
+                {
+                    generator.GenerateWithSeed(matchSeed);
+                }
+                catch (System.Exception ex)
+                {
+                    Debug.LogError($"[Multiplayer] Error starting generation with seed: {ex.Message}");
+                }
             }
             TrySpawnLocalPlayer();
         }
@@ -152,6 +169,19 @@ namespace Networking
         {
             Debug.Log($"[Multiplayer] Scene loaded: {scene.name}. Hooking generator...");
             HookGeneratorIfNeeded();
+            
+            // If match already began and we have a seed, start generation now.
+            if (lobbyStartedGame && hasSeed && generator != null)
+            {
+                try
+                {
+                    generator.GenerateWithSeed(matchSeed);
+                }
+                catch (System.Exception ex)
+                {
+                    Debug.LogError($"[Multiplayer] Error starting generation after scene load: {ex.Message}");
+                }
+            }
         }
 
         private void HookGeneratorIfNeeded()

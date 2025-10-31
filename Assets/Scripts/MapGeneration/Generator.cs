@@ -7,6 +7,7 @@ using Delaunay;
 using UnityEngine.Serialization;
 using UnityEngine.Tilemaps;
 using DungeonGenerator.Character;
+using Photon.Pun;
 
 namespace MapGeneration
 {
@@ -99,17 +100,30 @@ namespace MapGeneration
         // Health Bar Controller
         public GameObject healthBarController;
 
+        private int _seed;
+        private System.Random _rng;
+
         private void Start()
         {
-            Generate();
+            // Multiplayer flow triggers generation with a shared seed via MultiplayerGameManager.
+            // In offline/editor, press Tab (Update) to generate.
         }
 
         private void Update()
         {
             if (Input.GetKeyDown(KeyCode.Tab))
             {
-                Generate();
+                int seed = _seed != 0 ? _seed : (int)(System.DateTime.UtcNow.Ticks & 0x7FFFFFFF);
+                GenerateWithSeed(seed);
             }
+        }
+
+        public void GenerateWithSeed(int seed)
+        {
+            _seed = seed;
+            _rng = new System.Random(_seed);
+            UnityEngine.Random.InitState(_seed);
+            Generate();
         }
 
         // Paint decorative props onto the prop tilemap and reserve those tiles.
@@ -249,6 +263,12 @@ namespace MapGeneration
         // Try to derive a live player count from the spawn controller, otherwise fallback.
         private int GetPlayerCountEstimate()
         {
+            // Prefer Photon player count for deterministic multiplayer behavior
+            if (PhotonNetwork.IsConnected && PhotonNetwork.CurrentRoom != null)
+            {
+                return Mathf.Max(1, PhotonNetwork.CurrentRoom.PlayerCount);
+            }
+
             PlayerSpawnController spawner = FindAnyObjectByType<PlayerSpawnController>();
             if (spawner != null && spawner.SpawnedPlayers.Count > 0)
             {
@@ -256,6 +276,22 @@ namespace MapGeneration
             }
 
             return Mathf.Max(1, _expectedPlayerCount);
+        }
+
+        private static int SampleFromUIntRange(UIntRange range, System.Random rng)
+        {
+            int min = (int)range.GetMinValue;
+            int max = (int)range.GetMaxValue;
+            if (max < min) { int tmp = min; min = max; max = tmp; }
+            return rng.Next(min, max + 1);
+        }
+
+        private static uint SampleFromUIntRangeUint(UIntRange range, System.Random rng)
+        {
+            int min = (int)range.GetMinValue;
+            int max = (int)range.GetMaxValue;
+            if (max < min) { int tmp = min; min = max; max = tmp; }
+            return (uint)rng.Next(min, max + 1);
         }
 
         // Sample an inclusive count from the supplied range, clamping to fallback when invalid.
@@ -321,6 +357,12 @@ namespace MapGeneration
 
         public void Generate()
         {
+            if (_rng == null)
+            {
+                _seed = _seed != 0 ? _seed : (int)(System.DateTime.UtcNow.Ticks & 0x7FFFFFFF);
+                _rng = new System.Random(_seed);
+                UnityEngine.Random.InitState(_seed);
+            }
             // clear all tiles in case we generate again after start
             if (_floorMap != null) _floorMap.ClearAllTiles();
             if (_wallMap != null) _wallMap.ClearAllTiles();
@@ -332,9 +374,12 @@ namespace MapGeneration
             
             List<Room> rooms = new List<Room>();
 
-            for (int i = 0; i < _numberOfRooms.GetRandomIntValue; i++)
+            int numRooms = SampleFromUIntRange(_numberOfRooms, _rng);
+            for (int i = 0; i < numRooms; i++)
             {
-                rooms.Add(new Room(_roomSize.GetRandomUintValue, _roomSize.GetRandomUintValue, Vector2.zero));
+                uint rw = SampleFromUIntRangeUint(_roomSize, _rng);
+                uint rh = SampleFromUIntRangeUint(_roomSize, _rng);
+                rooms.Add(new Room(rw, rh, Vector2.zero));
             }
 
             _gizmoRooms = rooms;
@@ -622,7 +667,7 @@ namespace MapGeneration
         {
             if (_propMap != null) _propMap.ClearAllTiles();
 
-            System.Random rng = new System.Random();
+            System.Random rng = _rng;
 
             List<RoomAssignment> activeAssignments = new List<RoomAssignment>();
             foreach (KeyValuePair<Room, RoomGrid> kv in _roomGrids)
@@ -861,9 +906,9 @@ namespace MapGeneration
         {
             for (int i = 0; i < edges.Count; i++)
             {
-                float rng = UnityEngine.Random.Range(0f, 1f);
+                double r = _rng.NextDouble();
 
-                if (rng < _edgeReconnectionPercent)
+                if (r < _edgeReconnectionPercent)
                 {
                     mst.Add(edges[i]);
                 }

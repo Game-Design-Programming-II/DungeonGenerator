@@ -31,6 +31,7 @@ namespace Networking
         private bool lobbyStartedGame;
         private int matchSeed;
         private bool hasSeed;
+        private bool healthUiInitialized;
 
         private PhotonView cachedView;
 
@@ -117,6 +118,25 @@ namespace Networking
             catch (System.Exception ex)
             {
                 Debug.LogError($"[Multiplayer] Error notifying LocalPlayerSpawned: {ex.Message}");
+            }
+
+            // Initialize Health UI once the local PlayerStats singleton exists
+            TryInitHealthUI();
+        }
+
+        private void TryInitHealthUI()
+        {
+            if (healthUiInitialized) return;
+            var controller = FindAnyObjectByType<HealthBarController>();
+            if (controller == null) return;
+            try
+            {
+                controller.GenerateHealthDisplay();
+                healthUiInitialized = true;
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"[Multiplayer] Failed to initialize Health UI: {ex.Message}");
             }
         }
 

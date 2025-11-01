@@ -23,7 +23,6 @@ namespace Networking
         private float remoteLerpSpeed = 12f;
 
         private Vector3 networkPosition;
-        private Vector2 networkVelocity;
 
         private void Awake()
         {
@@ -76,12 +75,10 @@ namespace Networking
             if (stream.IsWriting)
             {
                 stream.SendNext(transform.position);
-                stream.SendNext(body.linearVelocity);
             }
             else
             {
                 networkPosition = (Vector3)stream.ReceiveNext();
-                networkVelocity = (Vector2)stream.ReceiveNext();
             }
         }
     }

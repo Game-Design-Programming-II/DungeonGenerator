@@ -87,7 +87,7 @@ TextureImporter:
     maxTextureSize: 2048
     resizeAlgorithm: 0
     textureFormat: -1
-    textureCompression: 1
+    textureCompression: 0
     compressionQuality: 50
     crunchedCompression: 0
     allowsAlphaSplitting: 0
@@ -115,9 +115,9 @@ TextureImporter:
       name: LankIdleHighlighted-Sheet_0
       rect:
         serializedVersion: 2
-        x: 4
+        x: 0
         y: 0
-        width: 9
+        width: 16
         height: 18
       alignment: 0
       pivot: {x: 0, y: 0}
@@ -137,9 +137,9 @@ TextureImporter:
       name: LankIdleHighlighted-Sheet_1
       rect:
         serializedVersion: 2
-        x: 20
+        x: 16
         y: 0
-        width: 9
+        width: 16
         height: 18
       alignment: 0
       pivot: {x: 0, y: 0}
@@ -159,10 +159,10 @@ TextureImporter:
       name: LankIdleHighlighted-Sheet_2
       rect:
         serializedVersion: 2
-        x: 36
+        x: 32
         y: 0
-        width: 9
-        height: 17
+        width: 16
+        height: 18
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -181,10 +181,10 @@ TextureImporter:
       name: LankIdleHighlighted-Sheet_3
       rect:
         serializedVersion: 2
-        x: 52
+        x: 48
         y: 0
-        width: 9
-        height: 16
+        width: 16
+        height: 18
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -203,9 +203,9 @@ TextureImporter:
       name: LankIdleHighlighted-Sheet_4
       rect:
         serializedVersion: 2
-        x: 68
+        x: 64
         y: 0
-        width: 9
+        width: 16
         height: 18
       alignment: 0
       pivot: {x: 0, y: 0}

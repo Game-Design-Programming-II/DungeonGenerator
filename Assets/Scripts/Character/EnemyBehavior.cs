@@ -32,7 +32,7 @@ namespace DungeonGenerator.Character
 
         private void OnEnable()
         {
-            spawnController = FindObjectOfType<PlayerSpawnController>();
+            spawnController = FindAnyObjectByType<PlayerSpawnController>();
             CacheExistingPlayers();
 
             if (spawnController != null)

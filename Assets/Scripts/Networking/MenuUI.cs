@@ -1,3 +1,4 @@
+using Networking;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -5,6 +6,7 @@ using Photon.Pun;
 using Photon.Realtime;
 using Unity.VisualScripting;
 
+[RequireComponent(typeof(PhotonView))]
 public class MenuUI : MonoBehaviourPunCallbacks
 {
     [Header("Screens")]
@@ -18,9 +20,24 @@ public class MenuUI : MonoBehaviourPunCallbacks
     [Header("Lobby Screen")]
     public TextMeshProUGUI playerListText;
     public Button startGameButton;
+    
+    [Header("Scene References")]
+    public string sceneName;
+
+    private PhotonView cachedView;
 
     void Start()
     {
+        cachedView = GetComponent<PhotonView>();
+        if (cachedView == null)
+        {
+            cachedView = gameObject.AddComponent<PhotonView>();
+        }
+        if (cachedView.ViewID == 0)
+        {
+            cachedView.ViewID = 1002;
+        }
+
         createRoomButton.interactable = false;
         joinRoomButton.interactable = false;
     }
@@ -54,13 +71,12 @@ public class MenuUI : MonoBehaviourPunCallbacks
         PhotonNetwork.NickName = playerNameInput.text;
     }
 
-    [PunRPC]
     public void UpdateLobbyUI()
     {
         playerListText.text = "";
         foreach (Player player in PhotonNetwork.PlayerList)
         {
-            playerListText.text += player.NickName + "\n";
+            playerListText.text += $"{player.ActorNumber} : {player.NickName}\n";
         }
 
         if (PhotonNetwork.IsMasterClient)
@@ -77,12 +93,24 @@ public class MenuUI : MonoBehaviourPunCallbacks
     {
         //base.OnJoinedRoom();
         SetScreen(lobbyScreen);
-        photonView.RPC("UpdateLobbyUI", RpcTarget.All);
+        UpdateLobbyUI();
+    }
+
+    public override void OnPlayerEnteredRoom(Player newPlayer)
+    {
+        // Refresh lobby list when someone joins
+        UpdateLobbyUI();
     }
 
     public override void OnPlayerLeftRoom(Player otherPlayer)
     {
         //base.OnPlayerLeftRoom(otherPlayer);
+        UpdateLobbyUI();
+    }
+
+    public override void OnMasterClientSwitched(Player newMasterClient)
+    {
+        // Update start button interactable state
         UpdateLobbyUI();
     }
 
@@ -94,7 +122,33 @@ public class MenuUI : MonoBehaviourPunCallbacks
 
     public void StartGameButton()
     {
-        NetworkManager.instance.photonView.RPC("ChangeScene",
-            RpcTarget.All, "Gameplay");
+        if (string.IsNullOrEmpty(sceneName))
+        {
+            Debug.LogError("[MenuUI] Scene name not assigned for StartGameButton.");
+            return;
+        }
+
+        if (!PhotonNetwork.IsMasterClient)
+        {
+            Debug.LogWarning("[MenuUI] StartGame pressed by non-master; ignoring.");
+            return;
+        }
+
+        // Create a deterministic seed for this match
+        int seed = (int)(System.DateTime.UtcNow.Ticks & 0x7FFFFFFF);
+
+        // Master loads the scene; AutomaticallySyncScene will move all clients.
+        PhotonNetwork.LoadLevel(sceneName);
+
+        // Signal match start to all clients (buffered for late-joiners) with the shared seed.
+        PhotonView gameManagerView = MultiplayerGameManager.Instance?.photonView;
+        if (gameManagerView != null)
+        {
+            gameManagerView.RPC("BeginMatch", RpcTarget.AllBuffered, seed);
+        }
+        else
+        {
+            Debug.LogError("[MenuUI] MultiplayerGameManager PhotonView not found; BeginMatch not sent.");
+        }
     }
 }

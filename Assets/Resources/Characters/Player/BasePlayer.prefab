@@ -15,8 +15,10 @@ GameObject:
   - component: {fileID: 141277055091740728}
   - component: {fileID: 7848601209464427915}
   - component: {fileID: 411873356544224551}
+  - component: {fileID: 3093836594385018606}
+  - component: {fileID: 9110779858042006093}
   m_Layer: 10
-  m_Name: PlayerRoot
+  m_Name: BasePlayer
   m_TagString: Player
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -307,3 +309,41 @@ MonoBehaviour:
   maxHealth: 16
   maxTotalHealth: 16
   hasKey: 1
+--- !u!114 &3093836594385018606
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8076220598909356601}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aa584fbee541324448dd18d8409c7a41, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ObservedComponentsFoldoutOpen: 1
+  Group: 0
+  prefixField: -1
+  Synchronization: 3
+  OwnershipTransfer: 1
+  observableSearch: 2
+  ObservedComponents:
+  - {fileID: 9110779858042006093}
+  sceneViewId: 0
+  InstantiationId: 0
+  isRuntimeInstantiated: 0
+--- !u!114 &9110779858042006093
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8076220598909356601}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9d3bdb0956b94d6aa0a77b08373d20cb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  characterController: {fileID: 8043779374801913053}
+  body: {fileID: 141277055091740728}
+  remoteLerpSpeed: 12

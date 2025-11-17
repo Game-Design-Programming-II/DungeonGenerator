@@ -8,7 +8,7 @@ namespace Interactibles
         {
             if (collision.tag == "Player" && collision.GetComponent<PlayerStats>().Health < collision.GetComponent<PlayerStats>().MaxHealth)
             {
-                collision.GetComponent<PlayerStats>().Heal(1000);
+                collision.GetComponent<PlayerStats>().Heal(5);
                 Destroy(gameObject);
             }
         }

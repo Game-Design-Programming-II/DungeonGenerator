@@ -74,7 +74,7 @@ namespace DungeonGenerator.Character
 
         private void CacheExistingPlayers()
         {
-            PlayerCharacterController[] players = FindObjectsOfType<PlayerCharacterController>();
+            PlayerCharacterController[] players = FindObjectsByType<PlayerCharacterController>(FindObjectsSortMode.None);
             foreach (PlayerCharacterController player in players)
             {
                 RegisterPlayer(player.transform);

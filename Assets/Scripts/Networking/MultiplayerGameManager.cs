@@ -63,13 +63,13 @@ namespace Networking
             PhotonNetwork.AutomaticallySyncScene = true;
         }
 
-        private void OnEnable()
+        public override void OnEnable()
         {
             SceneManager.sceneLoaded += OnSceneLoaded;
             HookGeneratorIfNeeded();
         }
 
-        private void OnDisable()
+        public override void OnDisable()
         {
             SceneManager.sceneLoaded -= OnSceneLoaded;
             if (generator != null)

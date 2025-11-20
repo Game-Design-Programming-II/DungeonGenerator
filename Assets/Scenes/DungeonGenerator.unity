@@ -1274,7 +1274,7 @@ MonoBehaviour:
   _wallCollider: {fileID: 228086547}
   _wallComposite: {fileID: 228086548}
   _floorTile: {fileID: 11400000, guid: 5808421d105704a72a11f89e5b7d3efa, type: 2}
-  _wallTile: {fileID: 11400000, guid: 94cf6d2f85f314cb8818f00bf44f9d16, type: 2}
+  _wallTile: {fileID: 11400000, guid: 1ad2aef1a68d6944c8c6c122d44b3529, type: 2}
   _endTile: {fileID: 11400000, guid: ac63da5f6ed3d4e08a720d06b161ddb7, type: 2}
   _propScatterDensity: 0.208
   _propSet:

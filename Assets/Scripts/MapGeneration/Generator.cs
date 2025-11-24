@@ -737,6 +737,59 @@ namespace MapGeneration
             ScatterPickups(grid, rng, blocked);
         }
 
+        // Paint decorative props onto the prop tilemap and reserve those tiles.
+        private void ScatterProps(RoomGrid grid, System.Random rng, HashSet<Vector2Int> blocked)
+        {
+            if (_propSet == null || _propSet.Count == 0 || _propScatterDensity <= 0f) return;
+
+            IRoomContentGenerator generator = new RandomScatterGenerator(_propScatterDensity);
+            List<Vector2Int> placements = generator.Generate(grid, rng);
+
+            foreach (Vector2Int cell in placements)
+            {
+                if (!grid.InBounds(cell.x, cell.y)) continue;
+                if (grid.Cells[cell.x, cell.y] != CellType.Floor) continue;
+
+                grid.Cells[cell.x, cell.y] = CellType.Prop;
+                blocked?.Add(cell);
+
+                Vector3Int world = grid.CellToWorld(cell.x, cell.y);
+                TileBase chosen = PickWeightedProp(rng);
+                if (chosen != null)
+                {
+                    _propMap.SetTile(world, chosen);
+                }
+            }
+        }
+
+        // Drop a single enemy type into the room using the configured count range.
+        private void SpawnEnemiesInRoom(RoomGrid grid, System.Random rng, HashSet<Vector2Int> blocked)
+        {
+            if (_enemyTypes == null || _enemyTypes.Count == 0) return;
+
+            EnemySpawnConfig config = _enemyTypes[rng.Next(_enemyTypes.Count)];
+            if (config == null || config.prefab == null)
+            {
+                Debug.LogWarning("[EnemySpawn] Missing enemy prefab configuration.");
+                return;
+            }
+
+            int spawnCount = SampleCount(config.countRange, _fallbackEnemyCount, rng);
+            if (spawnCount <= 0) return;
+
+            for (int i = 0; i < spawnCount; i++)
+            {
+                if (!TryGetRandomFloorCell(grid, rng, blocked, out Vector2Int cell))
+                {
+                    Debug.LogWarning("[EnemySpawn] Unable to find a free floor cell for enemy.");
+                    break;
+                }
+
+                SpawnPrefabAtCell(config.prefab, grid, cell);
+                blocked?.Add(cell);
+            }
+        }
+
         // Distribute pick-up prefabs across floor tiles using a Bernoulli trial.
         private void ScatterPickups(RoomGrid grid, System.Random rng, HashSet<Vector2Int> blocked)
         {
@@ -897,65 +950,6 @@ namespace MapGeneration
             }
         }
 
-        // Paint decorative props onto the prop tilemap and reserve those tiles.
-        private void ScatterProps(RoomGrid grid, System.Random rng, HashSet<Vector2Int> blocked)
-        {
-            if (_propSet == null || _propSet.Count == 0 || _propScatterDensity <= 0f) return;
-
-            IRoomContentGenerator generator = new RandomScatterGenerator(_propScatterDensity);
-            List<Vector2Int> placements = generator.Generate(grid, rng);
-
-            foreach (Vector2Int cell in placements)
-            {
-                if (!grid.InBounds(cell.x, cell.y)) continue;
-                if (grid.Cells[cell.x, cell.y] != CellType.Floor) continue;
-
-                grid.Cells[cell.x, cell.y] = CellType.Prop;
-                blocked?.Add(cell);
-
-                Vector3Int world = grid.CellToWorld(cell.x, cell.y);
-                TileBase chosen = PickWeightedProp(rng);
-                if (chosen != null)
-                {
-                    _propMap.SetTile(world, chosen);
-                }
-            }
-        }
-
-        // Drop a single enemy type into the room using the configured count range.
-        private void SpawnEnemiesInRoom(RoomGrid grid, System.Random rng, HashSet<Vector2Int> blocked)
-        {
-            if (_enemyTypes == null || _enemyTypes.Count == 0) return;
-
-            EnemySpawnConfig config = _enemyTypes[rng.Next(_enemyTypes.Count)];
-            if (config == null || config.prefab == null)
-            {
-                Debug.LogWarning("[EnemySpawn] Missing enemy prefab configuration.");
-                return;
-            }
-
-            int spawnCount = SampleCount(config.countRange, _fallbackEnemyCount, rng);
-            if (spawnCount <= 0) return;
-
-            for (int i = 0; i < spawnCount; i++)
-            {
-                if (!TryGetRandomFloorCell(grid, rng, blocked, out Vector2Int cell))
-                {
-                    Debug.LogWarning("[EnemySpawn] Unable to find a free floor cell for enemy.");
-                    break;
-                }
-
-                SpawnPrefabAtCell(config.prefab, grid, cell);
-                blocked?.Add(cell);
-            }
-        }
-
-        
-
-        
-
-        
-
         // Try to derive a live player count from the spawn controller, otherwise fallback.
         private int GetPlayerCountEstimate()
         {
@@ -1054,8 +1048,6 @@ namespace MapGeneration
                 yield return cur;
             }
         }
-
-        
 
         private int SortBySize(Room A, Room B)
         {

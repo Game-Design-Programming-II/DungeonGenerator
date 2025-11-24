@@ -19,7 +19,7 @@ namespace DungeonGenerator.Character
         [SerializeField] private LayerMask lineOfSightObstacles = Physics2D.DefaultRaycastLayers;
         [SerializeField] private bool debugDrawLineOfSight;
 
-        [SerializeField] private List<Transform> trackedPlayers = new List<Transform>();
+        private readonly List<Transform> trackedPlayers = new List<Transform>();
         private Rigidbody2D body;
         private PlayerSpawnController spawnController;
 

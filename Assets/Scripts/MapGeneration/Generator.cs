@@ -30,16 +30,16 @@ namespace MapGeneration
         [SerializeField] private TilemapCollider2D _wallCollider;
         [SerializeField, Tooltip("Optional composite collider used with the wall tilemap.")]
         private CompositeCollider2D _wallComposite;
-        
+
         [Header("Single-Sprite Tiles")]
         [SerializeField] private TileBase _floorTile;
         [SerializeField] private TileBase _wallTile;
         [SerializeField] private TileBase _endTile;
 
-        [Header("Prop content (placeholder until WFC implemented)")] 
+        [Header("Prop content (placeholder until WFC implemented)")]
         [SerializeField, Range(0f, 1f)] private float _propScatterDensity = 0.08f;
         [SerializeField] private List<WeightedProp> _propSet = new List<WeightedProp>();
-        
+
         [Header("Runtime Content Spawning")]
         [SerializeField] private Transform _runtimeContentParent;
         [SerializeField] private List<EnemySpawnConfig> _enemyTypes = new List<EnemySpawnConfig>();
@@ -51,7 +51,7 @@ namespace MapGeneration
         [SerializeField] private GameObject _spikeTrapPrefab;
         [SerializeField, Range(0f, 1f)] private float _spikeTrapDensity = 0.25f;
         [SerializeField] private GameObject _pressurePlatePrefab;
-        
+
         [Header("Test Variables, remove later")]
         [SerializeField] private TileBase _doorTile;
         [SerializeField] private TileBase _aStarTile;
@@ -67,10 +67,10 @@ namespace MapGeneration
         public bool HasPlayerSpawn => _hasPlayerSpawn;
         public Vector3 PlayerSpawnWorldPosition => _playerSpawnWorldPosition;
         public event Action<Vector3> PlayerSpawnPointUpdated;
-        
+
         // A*
         private Dictionary<Room, List<Vector2Int>> _roomDoors = new();
-        
+
         private List<Edge> _lastCorridors;
         private List<Room> _lastRooms;
 
@@ -79,7 +79,7 @@ namespace MapGeneration
         private List<Room> _gizmoRooms = new List<Room>();
         private List<Edge> _gizmoEdges = new List<Edge>();
         private List<Edge> _gizmoMST = new List<Edge>();
-        
+
         private enum RoomContentRole
         {
             Combat,
@@ -124,6 +124,678 @@ namespace MapGeneration
             _rng = new System.Random(_seed);
             UnityEngine.Random.InitState(_seed);
             Generate();
+        }
+
+        public void Generate()
+        {
+            if (_rng == null)
+            {
+                _seed = _seed != 0 ? _seed : (int)(System.DateTime.UtcNow.Ticks & 0x7FFFFFFF);
+                _rng = new System.Random(_seed);
+                UnityEngine.Random.InitState(_seed);
+            }
+            // clear all tiles in case we generate again after start
+            if (_floorMap != null) _floorMap.ClearAllTiles();
+            if (_wallMap != null) _wallMap.ClearAllTiles();
+            if (_propMap != null) _propMap.ClearAllTiles();
+            if (_debugMap != null) _debugMap.ClearAllTiles();
+
+            ClearPlayerSpawnPoint();
+            RefreshWallColliders();
+
+            List<Room> rooms = new List<Room>();
+
+            int numRooms = SampleFromUIntRange(_numberOfRooms, _rng);
+            for (int i = 0; i < numRooms; i++)
+            {
+                uint rw = SampleFromUIntRangeUint(_roomSize, _rng);
+                uint rh = SampleFromUIntRangeUint(_roomSize, _rng);
+                rooms.Add(new Room(rw, rh, Vector2.zero));
+            }
+
+            _gizmoRooms = rooms;
+
+            StartCoroutine(SeparateRooms(rooms));
+        }
+
+        private void ClearPlayerSpawnPoint()
+        {
+            _hasPlayerSpawn = false;
+            _playerSpawnWorldPosition = Vector3.zero;
+        }
+
+        private void RefreshWallColliders()
+        {
+            if (_wallCollider != null)
+            {
+                _wallCollider.ProcessTilemapChanges();
+            }
+
+            if (_wallComposite != null)
+            {
+                _wallComposite.GenerateGeometry();
+            }
+        }
+
+        private static int SampleFromUIntRange(UIntRange range, System.Random rng)
+        {
+            int min = (int)range.GetMinValue;
+            int max = (int)range.GetMaxValue;
+            if (max < min) { int tmp = min; min = max; max = tmp; }
+            return rng.Next(min, max + 1);
+        }
+
+        private static uint SampleFromUIntRangeUint(UIntRange range, System.Random rng)
+        {
+            int min = (int)range.GetMinValue;
+            int max = (int)range.GetMaxValue;
+            if (max < min) { int tmp = min; min = max; max = tmp; }
+            return (uint)rng.Next(min, max + 1);
+        }
+
+        private IEnumerator SeparateRooms(List<Room> rooms)
+        {
+            bool collisionFound = true;
+
+            while (collisionFound == true)
+            {
+                collisionFound = CollisionHelper.Collision2D.DetectRoomCollision(rooms, _separationRange);
+                yield return null;
+            }
+
+            StartCoroutine(Triangulate(rooms));
+        }
+
+        private IEnumerator Triangulate(List<Room> rooms)
+        {
+            rooms.Sort(SortBySize);
+            TurnOffRoomsUnderSizeLimit(rooms);
+            Vector2[] extents = FindExtents(rooms);
+
+            float offsetAmount = _superTriangleOffset * _numberOfRooms.GetMaxValue;
+
+            extents[0] += new Vector2(0f, offsetAmount);
+            extents[1] += new Vector2(-offsetAmount, -offsetAmount);
+            extents[2] += new Vector2(offsetAmount, -offsetAmount);
+
+            List<Triangle> triangles = new List<Triangle>();
+            triangles.Add(new Triangle(extents[0], extents[1], extents[2]));
+
+            //bowyer-watson algorithm, modified
+            for (int i = 0; i < rooms.Count; i++)
+            {
+                if (rooms[i].TurnedOff == true)
+                {
+                    continue;
+                }
+
+                triangles = DelaunayCalculator.BowyerWatson(triangles, rooms[i]);
+                yield return null;
+            }
+
+            List<Edge> edges = DelaunayCalculator.CalculateEdges(triangles, extents);
+            _gizmoEdges = edges;
+
+            StartCoroutine(PrimMinimumSpanning(edges, rooms));
+        }
+
+        private IEnumerator PrimMinimumSpanning(List<Edge> edges, List<Room> rooms)
+        {
+            List<Edge> mst = new List<Edge>();
+
+            List<Room> unreached = new List<Room>(rooms);
+
+            for (int i = unreached.Count - 1; i >= 0; i--)
+            {
+                if (unreached[i].TurnedOff == true)
+                {
+                    unreached.RemoveAt(i);
+                }
+            }
+
+            List<Room> reached = new List<Room>();
+            Dictionary<Room, List<Edge>> roomDict = new Dictionary<Room, List<Edge>>();
+
+            for (int i = 0; i < rooms.Count; i++)
+            {
+                List<Edge> edgesFound = DelaunayCalculator.CollectAllEdgesConnectedToPoint(edges, rooms[i].Position);
+                if (roomDict.ContainsKey(rooms[i]) == false)
+                {
+                    roomDict.Add(rooms[i], edgesFound);
+                }
+                else
+                {
+                    roomDict[rooms[i]] = edgesFound;
+                }
+            }
+
+            reached.Add(unreached[0]);
+            unreached.RemoveAt(0);
+
+            while (unreached.Count > 0)
+            {
+                float curBestDistance = Mathf.Infinity;
+
+                int reachedIndex = 0;
+                int unreachedIndex = 0;
+                int localEdgeIndex = 0;
+                Edge curEdge = null;
+
+                for (int i = 0; i < reached.Count; i++)
+                {
+                    for (int j = 0; j < unreached.Count; j++)
+                    {
+                        Room reachedRoom = reached[i];
+                        Room unreachedRoom = unreached[j];
+
+                        List<Edge> edgesOfRoom = roomDict[reachedRoom];
+
+                        for (int e = 0; e < edgesOfRoom.Count; e++)
+                        {
+                            if (edgesOfRoom[e].SharesEdge(reachedRoom.Position, unreachedRoom.Position) &&
+                                curBestDistance > edgesOfRoom[e].GetDistance)
+                            {
+                                curBestDistance = edgesOfRoom[e].GetDistance;
+                                reachedIndex = i;
+                                unreachedIndex = j;
+                                curEdge = edgesOfRoom[e];
+                                localEdgeIndex = e;
+                            }
+                        }
+                    }
+                }
+
+                if (curEdge != null)
+                {
+                    Room reachedNode = reached[reachedIndex];
+                    Room unreachedNode = unreached[unreachedIndex];
+
+                    for (int i = roomDict[unreachedNode].Count - 1; i >= 0; i--)
+                    {
+                        if (roomDict[unreachedNode][i].SharesEdge(unreachedNode.Position, reachedNode.Position))
+                        {
+                            roomDict[unreachedNode].RemoveAt(i);
+                        }
+                    }
+
+                    roomDict[reachedNode].RemoveAt(localEdgeIndex);
+                    reached.Add(unreachedNode);
+                    unreached.RemoveAt(unreachedIndex);
+                    mst.Add(curEdge);
+                    edges.Remove(curEdge);
+                }
+
+                yield return null;
+            }
+
+            AddRandomEdges(edges, mst);
+            List<Edge> corridors = CalculateCorridors(mst, rooms);
+            BuildRoomGrids(rooms);
+            _lastRooms = new List<Room>(rooms);
+            _lastCorridors = corridors;
+            StartCoroutine(DrawContent(rooms, corridors));
+            _gizmoMST = mst;
+        }
+
+        private void AddRandomEdges(List<Edge> edges, List<Edge> mst)
+        {
+            for (int i = 0; i < edges.Count; i++)
+            {
+                double r = _rng.NextDouble();
+
+                if (r < _edgeReconnectionPercent)
+                {
+                    mst.Add(edges[i]);
+                }
+            }
+        }
+
+        private List<Edge> CalculateCorridors(List<Edge> mst, List<Room> rooms)
+        {
+            List<Edge> corridors = new List<Edge>();
+
+            for (int i = 0; i < mst.Count; i++)
+            {
+                Vector2 A = mst[i].GetPointA;
+                Vector2 B = mst[i].GetPointB;
+
+                Vector2 midPoint = new Vector2(A.x, B.y);
+
+                // Avoid adding zero-length segments in straight-line cases
+                if (midPoint != A)
+                {
+                    corridors.Add(new Edge(A, midPoint));
+                }
+                if (midPoint != B)
+                {
+                    corridors.Add(new Edge(midPoint, B));
+                }
+            }
+
+            return corridors;
+        }
+
+        private void BuildRoomGrids(List<Room> rooms)
+        {
+            _roomGrids.Clear(); // remove old room grids
+
+            // // TODO: remove debug
+            // int roomsIterated_Grid = 0;
+            // int roomsActive_Grid = 0;
+
+            foreach (Room r in rooms)
+            {
+                // roomsIterated_Grid++;
+                if (r.TurnedOff) continue; // only use active rooms
+
+                // roomsActive_Grid++;
+                RoomGrid grid = new RoomGrid(r);
+                _roomGrids[r] = grid;
+            }
+
+            // Debug.Log($"[BuildRoomdGrids] Rooms iterated: {roomsIterated_Grid},  active grids: {roomsActive_Grid}");
+        }
+
+        private IEnumerator DrawContent(List<Room> rooms, List<Edge> corridors)
+        {
+            int iteration = 0;
+
+            // room count TODO: remove debug stuff
+            int roomsIterated_Draw = rooms.Count;
+            int roomsActive_Draw = 0;
+
+            for (int i = 0; i < rooms.Count; i++)
+            {
+                Room curRoom = rooms[i];
+                if (curRoom.TurnedOff == false)
+                {
+                    roomsActive_Draw++;
+                    Vector2 topLeft = new Vector2(curRoom.Position.x - curRoom.GetWidth,
+                        curRoom.Position.y + curRoom.GetHeight);
+                    Vector2 topRight = new Vector2(curRoom.Position.x + curRoom.GetWidth,
+                        curRoom.Position.y + curRoom.GetHeight);
+                    Vector2 bottomLeft = new Vector2(curRoom.Position.x - curRoom.GetWidth,
+                        curRoom.Position.y - curRoom.GetHeight);
+                    Vector2 bottomRight = new Vector2(curRoom.Position.x + curRoom.GetWidth,
+                        curRoom.Position.y - curRoom.GetHeight);
+
+                    /* TODO: use WFC to draw floors and walls in their own functions on their own tile maps
+                     Also switch to using tilemap if possible*/
+                    //floor tiles
+                    MapVisualController.RectFill(curRoom.Position, curRoom.GetWidth,
+                        curRoom.GetHeight, _floorTile, _floorMap);
+                    //wall tiles
+                    MapVisualController.RectFill(topLeft, topRight, 1, _wallTile, _wallMap);
+                    MapVisualController.RectFill(topLeft, bottomLeft, 1, _wallTile, _wallMap);
+                    MapVisualController.RectFill(bottomLeft, bottomRight, 1, _wallTile, _wallMap);
+                    MapVisualController.RectFill(bottomRight, topRight, 1, _wallTile, _wallMap);
+
+                    iteration++;
+
+                    if (iteration >= _refreshCounterMax)
+                    {
+                        iteration = 0;
+                        yield return null;
+                    }
+                }
+            }
+
+            Debug.Log($"[DrawContent] Rooms iterated: {roomsIterated_Draw}, active drawn: {roomsActive_Draw}");
+
+            /* Draw corridors with clean floormap/wallmap split:
+             * - Floor path on _floorMap
+             * - Clear any walls along the path on _wallMap
+             * - Add walls to _wallMap adjacent to the path, but never over existing floors (rooms/corridors)
+             */
+            for (int i = 0; i < corridors.Count; i++)
+            {
+                Edge curEdge = corridors[i];
+                PaintCorridorSegment(curEdge.GetPointA, curEdge.GetPointB);
+
+                iteration++;
+
+                if (iteration >= _refreshCounterMax)
+                {
+                    iteration = 0;
+                    yield return null;
+                }
+            }
+
+            GenerateRoomContent();
+            EnsureRoomConnectivityAStar(); // guarantee paths and clear blocking
+            RefreshWallColliders();
+        }
+
+        private void GenerateRoomContent()
+        {
+            if (_propMap != null) _propMap.ClearAllTiles();
+
+            System.Random rng = _rng;
+
+            List<RoomAssignment> activeAssignments = new List<RoomAssignment>();
+            foreach (KeyValuePair<Room, RoomGrid> kv in _roomGrids)
+            {
+                Room room = kv.Key;
+                if (room == null || room.TurnedOff) continue;
+                activeAssignments.Add(new RoomAssignment
+                {
+                    room = room,
+                    grid = kv.Value,
+                    role = RoomContentRole.Combat
+                });
+            }
+
+            if (activeAssignments.Count == 0)
+            {
+                _startRoom = _endRoom = null;
+                ClearPlayerSpawnPoint();
+                Debug.LogWarning("[Content] No active rooms available for content generation.");
+                return;
+            }
+
+            List<RoomAssignment> assignments = BuildRoomAssignments(activeAssignments, rng);
+
+            foreach (RoomAssignment assignment in assignments)
+            {
+                switch (assignment.role)
+                {
+                    case RoomContentRole.Start:
+                        GenerateStartRoom(assignment, rng);
+                        break;
+                    case RoomContentRole.StartEnd:
+                        Debug.LogWarning("[Content] Start and end rooms are the same; likely only one room available.");
+                        GenerateStartRoom(assignment, rng);
+                        GenerateEndRoom(assignment, rng);
+                        break;
+                    case RoomContentRole.End:
+                        GenerateEndRoom(assignment, rng);
+                        break;
+                    case RoomContentRole.SpikePuzzle:
+                        GenerateSpikeTrapRoom(assignment, rng);
+                        break;
+                    case RoomContentRole.PressurePuzzle:
+                        GeneratePressurePlateRoom(assignment, rng);
+                        break;
+                    default:
+                        GenerateCombatRoom(assignment, rng);
+                        break;
+                }
+            }
+
+            if (_startRoom != null && _endRoom != null)
+            {
+                Debug.Log($"[Content] Start at world {_startWorld} in room centered {_startRoom.Position}, End at world {_endWorld} in room centered {_endRoom.Position}");
+            }
+        }
+
+        // Decide which rooms become start/end/puzzle/combat for this generation pass.
+        private List<RoomAssignment> BuildRoomAssignments(List<RoomAssignment> activeAssignments, System.Random rng)
+        {
+            // Copy the incoming list so we never mutate the original collection.
+            List<RoomAssignment> assignments = new List<RoomAssignment>(activeAssignments);
+            int count = assignments.Count;
+
+            // Randomly pick a room to become the player start.
+            int startIndex = rng.Next(count);
+            RoomAssignment start = assignments[startIndex];
+            start.role = RoomContentRole.Start;
+            assignments[startIndex] = start;
+
+            // Build a set of indices we can still allocate to other roles.
+            List<int> availableIndices = new List<int>();
+            for (int i = 0; i < count; i++)
+            {
+                if (i != startIndex)
+                {
+                    availableIndices.Add(i);
+                }
+            }
+
+            // Pick a separate room for the exit if possible.
+            if (availableIndices.Count > 0)
+            {
+                int endSelection = availableIndices[rng.Next(availableIndices.Count)];
+                RoomAssignment end = assignments[endSelection];
+                end.role = RoomContentRole.End;
+                assignments[endSelection] = end;
+                availableIndices.Remove(endSelection);
+            }
+            else
+            {
+                // Single-room dungeon; the start doubles as the end.
+                Debug.LogWarning("[Content] Only one room available; start and end will share the same space.");
+                RoomAssignment combined = assignments[startIndex];
+                combined.role = RoomContentRole.StartEnd;
+                assignments[startIndex] = combined;
+            }
+
+            // add future puzzles to this queue
+            List<RoomContentRole> puzzleQueue = new List<RoomContentRole>
+            {
+                RoomContentRole.SpikePuzzle,
+                RoomContentRole.PressurePuzzle
+            };
+
+            foreach (RoomContentRole puzzle in puzzleQueue)
+            {
+                if (availableIndices.Count == 0)
+                {
+                    Debug.LogWarning($"[Content] Not enough rooms to place puzzle type {puzzle}; skipping.");
+                    continue;
+                }
+
+                int pick = rng.Next(availableIndices.Count);
+                int roomIndex = availableIndices[pick];
+                RoomAssignment puzzleAssignment = assignments[roomIndex];
+                puzzleAssignment.role = puzzle;
+                assignments[roomIndex] = puzzleAssignment;
+                availableIndices.RemoveAt(pick);
+
+                Debug.Log($"[Content] Assigned room index {roomIndex} to {puzzle}.");
+            }
+
+            return assignments;
+        }
+
+        // Place the player spawn point and any starter pickups.
+        private void GenerateStartRoom(RoomAssignment assignment, System.Random rng)
+        {
+            _startRoom = assignment.room;
+            RoomGrid grid = assignment.grid;
+
+            _startLocal = PickRandomInteriorFloor(grid, rng);
+            _startWorld = grid.CellToWorld(_startLocal.x, _startLocal.y);
+            grid.Cells[_startLocal.x, _startLocal.y] = CellType.SpecialStart;
+            UpdatePlayerSpawnPoint(_startWorld);
+
+            HashSet<Vector2Int> blocked = new HashSet<Vector2Int> { _startLocal };
+            ScatterPickups(grid, rng, blocked);
+        }
+
+        // Place the dungeon exit marker and optional pickups.
+        private void GenerateEndRoom(RoomAssignment assignment, System.Random rng)
+        {
+            _endRoom = assignment.room;
+            RoomGrid grid = assignment.grid;
+
+            _endLocal = PickRandomInteriorFloor(grid, rng);
+            _endWorld = grid.CellToWorld(_endLocal.x, _endLocal.y);
+            grid.Cells[_endLocal.x, _endLocal.y] = CellType.SpecialEnd;
+
+            if (_endTile != null)
+            {
+                _propMap.SetTile(_endWorld, _endTile);
+            }
+            else
+            {
+                Debug.LogWarning("[EndRoom] _endTile not assigned; end marker will be invisible.");
+            }
+
+            HashSet<Vector2Int> blocked = new HashSet<Vector2Int> { _endLocal };
+            ScatterPickups(grid, rng, blocked);
+        }
+
+        // Puzzle room filled with spike traps; behaves differently from combat rooms.
+        private void GenerateSpikeTrapRoom(RoomAssignment assignment, System.Random rng)
+        {
+            RoomGrid grid = assignment.grid;
+            HashSet<Vector2Int> blocked = new HashSet<Vector2Int>();
+
+            SpawnSpikeTraps(grid, rng, blocked);
+            ScatterPickups(grid, rng, blocked);
+        }
+
+        // Puzzle room that spawns a pressure plate per player.
+        private void GeneratePressurePlateRoom(RoomAssignment assignment, System.Random rng)
+        {
+            Debug.Log("[GeneratePressurePlateRoom] Generating room...");
+            RoomGrid grid = assignment.grid;
+            HashSet<Vector2Int> blocked = new HashSet<Vector2Int>();
+
+            SpawnPressurePlates(grid, rng, blocked);
+            ScatterPickups(grid, rng, blocked);
+        }
+
+        // Default room: props, one enemy type, and a sprinkle of pickups.
+        private void GenerateCombatRoom(RoomAssignment assignment, System.Random rng)
+        {
+            RoomGrid grid = assignment.grid;
+            HashSet<Vector2Int> blocked = new HashSet<Vector2Int>();
+
+            ScatterProps(grid, rng, blocked);
+            SpawnEnemiesInRoom(grid, rng, blocked);
+            ScatterPickups(grid, rng, blocked);
+        }
+
+        private void EnsureRoomConnectivityAStar()
+        {
+            if (_lastRooms == null || _lastCorridors == null) return;
+
+            // Build door list for each active room (one doorway per corridor segment touching it)
+            _roomDoors.Clear();
+
+            // TODO: remove debug variables
+            int roomsIterated_Astar = 0;
+            int roomsActive_Astar = 0;
+
+            foreach (Room r in _lastRooms)
+            {
+                roomsIterated_Astar++;
+                if (!r.TurnedOff)
+                {
+                    roomsActive_Astar++;
+                    _roomDoors[r] = new List<Vector2Int>();
+                }
+            }
+
+            // quick lookup: world position -> room
+            Dictionary<Vector2, Room> roomAt = new Dictionary<Vector2, Room>();
+            foreach (Room r in _lastRooms)
+                if (!r.TurnedOff) roomAt[r.Position] = r;
+
+            // for each corridor segment, attach the endpoint that equals a room Center
+            foreach (Edge seg in _lastCorridors)
+            {
+                // If a corridor segment starts at a room center, carve a doorway there.
+                if (roomAt.TryGetValue(seg.GetPointA, out Room roomA) && _roomGrids.TryGetValue(roomA, out RoomGrid gridA))
+                {
+                    Vector2 dir = seg.GetPointB - seg.GetPointA; // toward midpoint
+                    Vector2Int door = CarveDoorOnBorder(gridA, roomA, dir);
+                    _roomDoors[roomA].Add(door);
+                    PaintDoorDebug(gridA, door.x, door.y);
+                }
+                // Likewise if it ends at a room center
+                if (roomAt.TryGetValue(seg.GetPointB, out Room roomB) && _roomGrids.TryGetValue(roomB, out RoomGrid gridB))
+                {
+                    Vector2 dir = seg.GetPointA - seg.GetPointB; // toward midpoint
+                    Vector2Int door = CarveDoorOnBorder(gridB, roomB, dir);
+                    _roomDoors[roomB].Add(door);
+                    PaintDoorDebug(gridB, door.x, door.y);
+                }
+            }
+
+            // TODO: REMOVE debug stuff
+            int roomsWithDoors = 0;
+            foreach (KeyValuePair<Room, List<Vector2Int>> kv in _roomDoors)
+                if (kv.Value != null && kv.Value.Count > 0)
+                    roomsWithDoors++;
+            Debug.Log($"[A*] Rooms iterated: {roomsIterated_Astar}, active:  {roomsActive_Astar}, with doors:  {roomsWithDoors}");
+
+            // For each room, A* between every pair of its door tiles and then clear props in the way
+            foreach (KeyValuePair<Room, List<Vector2Int>> kv in _roomDoors)
+            {
+                Room room = kv.Key;
+                RoomGrid grid = _roomGrids[room];
+                List<Vector2Int> doors = kv.Value;
+
+                for (int i = 0; i < doors.Count; i++)
+                    for (int j = i + 1; j < doors.Count; j++)
+                    {
+                        Vector2Int start = doors[i];
+                        Vector2Int goal = doors[j];
+
+                        List<Vector2Int> path = AStarPathfinder.FindPath(grid, start, goal);
+                        if (path == null) continue;
+
+                        // TODO: DEBUG: paint the A* path
+                        PaintPathDebug(grid, path);
+
+                        // Clear any props along the chosen path
+                        foreach (Vector2Int p in path)
+                        {
+                            if (!grid.InBounds(p.x, p.y)) continue;
+
+                            if (grid.Cells[p.x, p.y] == CellType.Prop)
+                            {
+                                grid.Cells[p.x, p.y] = CellType.Floor;
+                                Vector3Int w = grid.CellToWorld(p.x, p.y);
+                                _propMap.SetTile(w, null); // remove prop tile on the visual layer
+                            }
+                        }
+                    }
+            }
+        }
+
+        // Paint a 1-tile wide corridor floor from A to B on _floorMap,
+        // clear any walls along the path on _wallMap, and add adjacent walls on _wallMap
+        // without overwriting existing floors (prevents walls inside rooms).
+        private void PaintCorridorSegment(Vector2 A, Vector2 B)
+        {
+            if (_floorMap == null) return;
+
+            foreach (Vector3Int tilePos in EnumerateLineTiles(A, B))
+            {
+                // Clear walls along the path to avoid wall-over-floor
+                if (_wallMap != null)
+                {
+                    _wallMap.SetTile(tilePos, null);
+                }
+
+                // Lay floor
+                if (_floorTile != null)
+                {
+                    _floorMap.SetTile(tilePos, _floorTile);
+                }
+
+                // Add simple wall border on 4-neighbors where there is no floor
+                if (_wallMap != null && _wallTile != null)
+                {
+                    TryPlaceWall(tilePos + Vector3Int.up);
+                    TryPlaceWall(tilePos + Vector3Int.down);
+                    TryPlaceWall(tilePos + Vector3Int.left);
+                    TryPlaceWall(tilePos + Vector3Int.right);
+                }
+            }
+
+            void TryPlaceWall(Vector3Int pos)
+            {
+                // never place a wall where a floor already exists (room/corridor)
+                if (_floorMap.GetTile(pos) != null) return;
+                if (_wallMap.GetTile(pos) == null)
+                {
+                    _wallMap.SetTile(pos, _wallTile);
+                }
+            }
         }
 
         // Paint decorative props onto the prop tilemap and reserve those tiles.
@@ -278,22 +950,6 @@ namespace MapGeneration
             return Mathf.Max(1, _expectedPlayerCount);
         }
 
-        private static int SampleFromUIntRange(UIntRange range, System.Random rng)
-        {
-            int min = (int)range.GetMinValue;
-            int max = (int)range.GetMaxValue;
-            if (max < min) { int tmp = min; min = max; max = tmp; }
-            return rng.Next(min, max + 1);
-        }
-
-        private static uint SampleFromUIntRangeUint(UIntRange range, System.Random rng)
-        {
-            int min = (int)range.GetMinValue;
-            int max = (int)range.GetMaxValue;
-            if (max < min) { int tmp = min; min = max; max = tmp; }
-            return (uint)rng.Next(min, max + 1);
-        }
-
         // Sample an inclusive count from the supplied range, clamping to fallback when invalid.
         private int SampleCount(Vector2Int range, Vector2Int fallback, System.Random rng)
         {
@@ -355,294 +1011,6 @@ namespace MapGeneration
             return new Vector3(worldCell.x + 0.5f, worldCell.y + 0.5f, 0f);
         }
 
-        public void Generate()
-        {
-            if (_rng == null)
-            {
-                _seed = _seed != 0 ? _seed : (int)(System.DateTime.UtcNow.Ticks & 0x7FFFFFFF);
-                _rng = new System.Random(_seed);
-                UnityEngine.Random.InitState(_seed);
-            }
-            // clear all tiles in case we generate again after start
-            if (_floorMap != null) _floorMap.ClearAllTiles();
-            if (_wallMap != null) _wallMap.ClearAllTiles();
-            if (_propMap != null) _propMap.ClearAllTiles();
-            if (_debugMap != null) _debugMap.ClearAllTiles();
-
-            ClearPlayerSpawnPoint();
-            RefreshWallColliders();
-            
-            List<Room> rooms = new List<Room>();
-
-            int numRooms = SampleFromUIntRange(_numberOfRooms, _rng);
-            for (int i = 0; i < numRooms; i++)
-            {
-                uint rw = SampleFromUIntRangeUint(_roomSize, _rng);
-                uint rh = SampleFromUIntRangeUint(_roomSize, _rng);
-                rooms.Add(new Room(rw, rh, Vector2.zero));
-            }
-
-            _gizmoRooms = rooms;
-
-            StartCoroutine(SeparateRooms(rooms));
-        }
-
-        private IEnumerator SeparateRooms(List<Room> rooms)
-        {
-            bool collisionFound = true;
-
-            while (collisionFound == true)
-            {
-                collisionFound = CollisionHelper.Collision2D.DetectRoomCollision(rooms, _separationRange);
-                yield return null;
-            }
-
-            StartCoroutine(Triangulate(rooms));
-        }
-
-        private IEnumerator Triangulate(List<Room> rooms)
-        {
-            rooms.Sort(SortBySize);
-            TurnOffRoomsUnderSizeLimit(rooms);
-            Vector2[] extents = FindExtents(rooms);
-
-            float offsetAmount = _superTriangleOffset * _numberOfRooms.GetMaxValue;
-
-            extents[0] += new Vector2(0f, offsetAmount);
-            extents[1] += new Vector2(-offsetAmount, -offsetAmount);
-            extents[2] += new Vector2(offsetAmount, -offsetAmount);
-
-            List<Triangle> triangles = new List<Triangle>();
-            triangles.Add(new Triangle(extents[0], extents[1], extents[2]));
-
-            //bowyer-watson algorithm, modified
-            for (int i = 0; i < rooms.Count; i++)
-            {
-                if (rooms[i].TurnedOff == true)
-                {
-                    continue;
-                }
-
-                triangles = DelaunayCalculator.BowyerWatson(triangles, rooms[i]);
-                yield return null;
-            }
-
-            List<Edge> edges = DelaunayCalculator.CalculateEdges(triangles, extents);
-            _gizmoEdges = edges;
-
-            StartCoroutine(PrimMinimumSpanning(edges, rooms));
-        }
-
-        private IEnumerator PrimMinimumSpanning(List<Edge> edges, List<Room> rooms)
-        {
-            List<Edge> mst = new List<Edge>();
-
-            List<Room> unreached = new List<Room>(rooms);
-
-            for (int i = unreached.Count - 1; i >= 0; i--)
-            {
-                if (unreached[i].TurnedOff == true)
-                {
-                    unreached.RemoveAt(i);
-                }
-            }
-
-            List<Room> reached = new List<Room>();
-            Dictionary<Room, List<Edge>> roomDict = new Dictionary<Room, List<Edge>>();
-
-            for (int i = 0; i < rooms.Count; i++)
-            {
-                List<Edge> edgesFound = DelaunayCalculator.CollectAllEdgesConnectedToPoint(edges, rooms[i].Position);
-                if (roomDict.ContainsKey(rooms[i]) == false)
-                {
-                    roomDict.Add(rooms[i], edgesFound);
-                }
-                else
-                {
-                    roomDict[rooms[i]] = edgesFound;
-                }
-            }
-
-            reached.Add(unreached[0]);
-            unreached.RemoveAt(0);
-
-            while (unreached.Count > 0)
-            {
-                float curBestDistance = Mathf.Infinity;
-
-                int reachedIndex = 0;
-                int unreachedIndex = 0;
-                int localEdgeIndex = 0;
-                Edge curEdge = null;
-
-                for (int i = 0; i < reached.Count; i++)
-                {
-                    for (int j = 0; j < unreached.Count; j++)
-                    {
-                        Room reachedRoom = reached[i];
-                        Room unreachedRoom = unreached[j];
-
-                        List<Edge> edgesOfRoom = roomDict[reachedRoom];
-
-                        for (int e = 0; e < edgesOfRoom.Count; e++)
-                        {
-                            if (edgesOfRoom[e].SharesEdge(reachedRoom.Position, unreachedRoom.Position) &&
-                                curBestDistance > edgesOfRoom[e].GetDistance)
-                            {
-                                curBestDistance = edgesOfRoom[e].GetDistance;
-                                reachedIndex = i;
-                                unreachedIndex = j;
-                                curEdge = edgesOfRoom[e];
-                                localEdgeIndex = e;
-                            }
-                        }
-                    }
-                }
-
-                if (curEdge != null)
-                {
-                    Room reachedNode = reached[reachedIndex];
-                    Room unreachedNode = unreached[unreachedIndex];
-
-                    for (int i = roomDict[unreachedNode].Count - 1; i >= 0; i--)
-                    {
-                        if (roomDict[unreachedNode][i].SharesEdge(unreachedNode.Position, reachedNode.Position))
-                        {
-                            roomDict[unreachedNode].RemoveAt(i);
-                        }
-                    }
-
-                    roomDict[reachedNode].RemoveAt(localEdgeIndex);
-                    reached.Add(unreachedNode);
-                    unreached.RemoveAt(unreachedIndex);
-                    mst.Add(curEdge);
-                    edges.Remove(curEdge);
-                }
-
-                yield return null;
-            }
-
-            AddRandomEdges(edges, mst);
-            List<Edge> corridors = CalculateCorridors(mst, rooms);
-            BuildRoomGrids(rooms);
-            _lastRooms = new List<Room>(rooms);
-            _lastCorridors =  corridors;
-            StartCoroutine(DrawContent(rooms, corridors));
-            _gizmoMST = mst;
-        }
-
-        private IEnumerator DrawContent(List<Room> rooms, List<Edge> corridors)
-        {
-            int iteration = 0;
-            
-            // room count TODO: remove debug stuff
-            int roomsIterated_Draw = rooms.Count;
-            int roomsActive_Draw = 0;
-
-            for (int i = 0; i < rooms.Count; i++)
-            {
-                Room curRoom = rooms[i];
-                if (curRoom.TurnedOff == false)
-                {
-                    roomsActive_Draw++;
-                    Vector2 topLeft = new Vector2(curRoom.Position.x - curRoom.GetWidth,
-                        curRoom.Position.y + curRoom.GetHeight);
-                    Vector2 topRight = new Vector2(curRoom.Position.x + curRoom.GetWidth,
-                        curRoom.Position.y + curRoom.GetHeight);
-                    Vector2 bottomLeft = new Vector2(curRoom.Position.x - curRoom.GetWidth,
-                        curRoom.Position.y - curRoom.GetHeight);
-                    Vector2 bottomRight = new Vector2(curRoom.Position.x + curRoom.GetWidth,
-                        curRoom.Position.y - curRoom.GetHeight);
-
-                    /* TODO: use WFC to draw floors and walls in their own functions on their own tile maps
-                     Also switch to using tilemap if possible*/
-                    //floor tiles
-                    MapVisualController.RectFill(curRoom.Position, curRoom.GetWidth,
-                        curRoom.GetHeight, _floorTile, _floorMap);
-                    //wall tiles
-                    MapVisualController.RectFill(topLeft, topRight, 1, _wallTile, _wallMap);
-                    MapVisualController.RectFill(topLeft, bottomLeft, 1, _wallTile, _wallMap);
-                    MapVisualController.RectFill(bottomLeft, bottomRight, 1, _wallTile, _wallMap);
-                    MapVisualController.RectFill(bottomRight, topRight, 1, _wallTile, _wallMap);
-
-                    iteration++;
-
-                    if (iteration >= _refreshCounterMax)
-                    {
-                        iteration = 0;
-                        yield return null;
-                    }
-                }
-            }
-            
-            Debug.Log($"[DrawContent] Rooms iterated: {roomsIterated_Draw}, active drawn: {roomsActive_Draw}");
-
-            /* Draw corridors with clean floormap/wallmap split:
-             * - Floor path on _floorMap
-             * - Clear any walls along the path on _wallMap
-             * - Add walls to _wallMap adjacent to the path, but never over existing floors (rooms/corridors)
-             */
-            for (int i = 0; i < corridors.Count; i++)
-            {
-                Edge curEdge = corridors[i];
-                PaintCorridorSegment(curEdge.GetPointA, curEdge.GetPointB);
-                
-                iteration++;
-
-                if (iteration >= _refreshCounterMax)
-                {
-                    iteration = 0;
-                    yield return null;
-                }
-            }
-
-            GenerateRoomContent();
-            EnsureRoomConnectivityAStar(); // guarantee paths and clear blocking
-            RefreshWallColliders();
-        }
-
-        // Paint a 1-tile wide corridor floor from A to B on _floorMap,
-        // clear any walls along the path on _wallMap, and add adjacent walls on _wallMap
-        // without overwriting existing floors (prevents walls inside rooms).
-        private void PaintCorridorSegment(Vector2 A, Vector2 B)
-        {
-            if (_floorMap == null) return;
-
-            foreach (Vector3Int tilePos in EnumerateLineTiles(A, B))
-            {
-                // Clear walls along the path to avoid wall-over-floor
-                if (_wallMap != null)
-                {
-                    _wallMap.SetTile(tilePos, null);
-                }
-
-                // Lay floor
-                if (_floorTile != null)
-                {
-                    _floorMap.SetTile(tilePos, _floorTile);
-                }
-
-                // Add simple wall border on 4-neighbors where there is no floor
-                if (_wallMap != null && _wallTile != null)
-                {
-                    TryPlaceWall(tilePos + Vector3Int.up);
-                    TryPlaceWall(tilePos + Vector3Int.down);
-                    TryPlaceWall(tilePos + Vector3Int.left);
-                    TryPlaceWall(tilePos + Vector3Int.right);
-                }
-            }
-
-            void TryPlaceWall(Vector3Int pos)
-            {
-                // never place a wall where a floor already exists (room/corridor)
-                if (_floorMap.GetTile(pos) != null) return;
-                if (_wallMap.GetTile(pos) == null)
-                {
-                    _wallMap.SetTile(pos, _wallTile);
-                }
-            }
-        }
-
         // Enumerate integer tile positions along a straight line between two points.
         // Matches the stepping behavior used in MapVisualController.RectFill for line drawing.
         private IEnumerable<Vector3Int> EnumerateLineTiles(Vector2 from, Vector2 to)
@@ -663,74 +1031,6 @@ namespace MapGeneration
             }
         }
 
-        private void GenerateRoomContent()
-        {
-            if (_propMap != null) _propMap.ClearAllTiles();
-
-            System.Random rng = _rng;
-
-            List<RoomAssignment> activeAssignments = new List<RoomAssignment>();
-            foreach (KeyValuePair<Room, RoomGrid> kv in _roomGrids)
-            {
-                Room room = kv.Key;
-                if (room == null || room.TurnedOff) continue;
-                activeAssignments.Add(new RoomAssignment
-                {
-                    room = room,
-                    grid = kv.Value,
-                    role = RoomContentRole.Combat
-                });
-            }
-
-            if (activeAssignments.Count == 0)
-            {
-                _startRoom = _endRoom = null;
-                ClearPlayerSpawnPoint();
-                Debug.LogWarning("[Content] No active rooms available for content generation.");
-                return;
-            }
-
-            List<RoomAssignment> assignments = BuildRoomAssignments(activeAssignments, rng);
-
-            foreach (RoomAssignment assignment in assignments)
-            {
-                switch (assignment.role)
-                {
-                    case RoomContentRole.Start:
-                        GenerateStartRoom(assignment, rng);
-                        break;
-                    case RoomContentRole.StartEnd:
-                        Debug.LogWarning("[Content] Start and end rooms are the same; likely only one room available.");
-                        GenerateStartRoom(assignment, rng);
-                        GenerateEndRoom(assignment, rng);
-                        break;
-                    case RoomContentRole.End:
-                        GenerateEndRoom(assignment, rng);
-                        break;
-                    case RoomContentRole.SpikePuzzle:
-                        GenerateSpikeTrapRoom(assignment, rng);
-                        break;
-                    case RoomContentRole.PressurePuzzle:
-                        GeneratePressurePlateRoom(assignment, rng);
-                        break;
-                    default:
-                        GenerateCombatRoom(assignment, rng);
-                        break;
-                }
-            }
-
-            if (_startRoom != null && _endRoom != null)
-            {
-                Debug.Log($"[Content] Start at world {_startWorld} in room centered {_startRoom.Position}, End at world {_endWorld} in room centered {_endRoom.Position}");
-            }
-        }
-
-        private void ClearPlayerSpawnPoint()
-        {
-            _hasPlayerSpawn = false;
-            _playerSpawnWorldPosition = Vector3.zero;
-        }
-
         private void UpdatePlayerSpawnPoint(Vector3Int cellPosition)
         {
             Vector3 worldPosition;
@@ -747,218 +1047,6 @@ namespace MapGeneration
             _playerSpawnWorldPosition = worldPosition;
             _hasPlayerSpawn = true;
             PlayerSpawnPointUpdated?.Invoke(_playerSpawnWorldPosition);
-        }
-
-        private void RefreshWallColliders()
-        {
-            if (_wallCollider != null)
-            {
-                _wallCollider.ProcessTilemapChanges();
-            }
-
-            if (_wallComposite != null)
-            {
-                _wallComposite.GenerateGeometry();
-            }
-        }
-
-        // Decide which rooms become start/end/puzzle/combat for this generation pass.
-        private List<RoomAssignment> BuildRoomAssignments(List<RoomAssignment> activeAssignments, System.Random rng)
-        {
-            // Copy the incoming list so we never mutate the original collection.
-            List<RoomAssignment> assignments = new List<RoomAssignment>(activeAssignments);
-            int count = assignments.Count;
-
-            // Randomly pick a room to become the player start.
-            int startIndex = rng.Next(count);
-            RoomAssignment start = assignments[startIndex];
-            start.role = RoomContentRole.Start;
-            assignments[startIndex] = start;
-
-            // Build a set of indices we can still allocate to other roles.
-            List<int> availableIndices = new List<int>();
-            for (int i = 0; i < count; i++)
-            {
-                if (i != startIndex)
-                {
-                    availableIndices.Add(i);
-                }
-            }
-
-            // Pick a separate room for the exit if possible.
-            if (availableIndices.Count > 0)
-            {
-                int endSelection = availableIndices[rng.Next(availableIndices.Count)];
-                RoomAssignment end = assignments[endSelection];
-                end.role = RoomContentRole.End;
-                assignments[endSelection] = end;
-                availableIndices.Remove(endSelection);
-            }
-            else
-            {
-                // Single-room dungeon; the start doubles as the end.
-                Debug.LogWarning("[Content] Only one room available; start and end will share the same space.");
-                RoomAssignment combined = assignments[startIndex];
-                combined.role = RoomContentRole.StartEnd;
-                assignments[startIndex] = combined;
-            }
-
-            // add future puzzles to this queue
-            List<RoomContentRole> puzzleQueue = new List<RoomContentRole>
-            {
-                RoomContentRole.SpikePuzzle,
-                RoomContentRole.PressurePuzzle
-            };
-
-            foreach (RoomContentRole puzzle in puzzleQueue)
-            {
-                if (availableIndices.Count == 0)
-                {
-                    Debug.LogWarning($"[Content] Not enough rooms to place puzzle type {puzzle}; skipping.");
-                    continue;
-                }
-
-                int pick = rng.Next(availableIndices.Count);
-                int roomIndex = availableIndices[pick];
-                RoomAssignment puzzleAssignment = assignments[roomIndex];
-                puzzleAssignment.role = puzzle;
-                assignments[roomIndex] = puzzleAssignment;
-                availableIndices.RemoveAt(pick);
-
-                Debug.Log($"[Content] Assigned room index {roomIndex} to {puzzle}.");
-            }
-
-            return assignments;
-        }
-
-        // Place the player spawn point and any starter pickups.
-        private void GenerateStartRoom(RoomAssignment assignment, System.Random rng)
-        {
-            _startRoom = assignment.room;
-            RoomGrid grid = assignment.grid;
-
-            _startLocal = PickRandomInteriorFloor(grid, rng);
-            _startWorld = grid.CellToWorld(_startLocal.x, _startLocal.y);
-            grid.Cells[_startLocal.x, _startLocal.y] = CellType.SpecialStart;
-            UpdatePlayerSpawnPoint(_startWorld);
-
-            HashSet<Vector2Int> blocked = new HashSet<Vector2Int> { _startLocal };
-            ScatterPickups(grid, rng, blocked);
-        }
-
-        // Place the dungeon exit marker and optional pickups.
-        private void GenerateEndRoom(RoomAssignment assignment, System.Random rng)
-        {
-            _endRoom = assignment.room;
-            RoomGrid grid = assignment.grid;
-
-            _endLocal = PickRandomInteriorFloor(grid, rng);
-            _endWorld = grid.CellToWorld(_endLocal.x, _endLocal.y);
-            grid.Cells[_endLocal.x, _endLocal.y] = CellType.SpecialEnd;
-
-            if (_endTile != null)
-            {
-                _propMap.SetTile(_endWorld, _endTile);
-            }
-            else
-            {
-                Debug.LogWarning("[EndRoom] _endTile not assigned; end marker will be invisible.");
-            }
-
-            HashSet<Vector2Int> blocked = new HashSet<Vector2Int> { _endLocal };
-            ScatterPickups(grid, rng, blocked);
-        }
-
-        // Default room: props, one enemy type, and a sprinkle of pickups.
-        private void GenerateCombatRoom(RoomAssignment assignment, System.Random rng)
-        {
-            RoomGrid grid = assignment.grid;
-            HashSet<Vector2Int> blocked = new HashSet<Vector2Int>();
-
-            ScatterProps(grid, rng, blocked);
-            SpawnEnemiesInRoom(grid, rng, blocked);
-            ScatterPickups(grid, rng, blocked);
-        }
-
-        // Puzzle room filled with spike traps; behaves differently from combat rooms.
-        private void GenerateSpikeTrapRoom(RoomAssignment assignment, System.Random rng)
-        {
-            RoomGrid grid = assignment.grid;
-            HashSet<Vector2Int> blocked = new HashSet<Vector2Int>();
-
-            SpawnSpikeTraps(grid, rng, blocked);
-            ScatterPickups(grid, rng, blocked);
-        }
-
-        // Puzzle room that spawns a pressure plate per player.
-        private void GeneratePressurePlateRoom(RoomAssignment assignment, System.Random rng)
-        {
-            Debug.Log("[GeneratePressurePlateRoom] Generating room...");
-            RoomGrid grid = assignment.grid;
-            HashSet<Vector2Int> blocked = new HashSet<Vector2Int>();
-            
-            SpawnPressurePlates(grid, rng, blocked);
-            ScatterPickups(grid, rng, blocked);
-        }
-
-
-        private void AddRandomEdges(List<Edge> edges, List<Edge> mst)
-        {
-            for (int i = 0; i < edges.Count; i++)
-            {
-                double r = _rng.NextDouble();
-
-                if (r < _edgeReconnectionPercent)
-                {
-                    mst.Add(edges[i]);
-                }
-            }
-        }
-
-        private List<Edge> CalculateCorridors(List<Edge> mst, List<Room> rooms)
-        {
-            List<Edge> corridors = new List<Edge>();
-
-            for (int i = 0; i < mst.Count; i++)
-            {
-                Vector2 A = mst[i].GetPointA;
-                Vector2 B = mst[i].GetPointB;
-
-                Vector2 midPoint = new Vector2(A.x, B.y);
-
-                // Avoid adding zero-length segments in straight-line cases
-                if (midPoint != A)
-                {
-                    corridors.Add(new Edge(A, midPoint));
-                }
-                if (midPoint != B)
-                {
-                    corridors.Add(new Edge(midPoint, B));
-                }
-            }
-
-            return corridors;
-        }
-
-        private void BuildRoomGrids(List<Room> rooms)
-        {
-            _roomGrids.Clear(); // remove old room grids
-
-            // // TODO: remove debug
-            // int roomsIterated_Grid = 0;
-            // int roomsActive_Grid = 0;
-
-            foreach (Room r in rooms)
-            {
-                // roomsIterated_Grid++;
-                if (r.TurnedOff) continue; // only use active rooms
-                
-                // roomsActive_Grid++;
-                RoomGrid grid = new RoomGrid(r);
-                _roomGrids[r] = grid;
-            }
-            
-            // Debug.Log($"[BuildRoomdGrids] Rooms iterated: {roomsIterated_Grid},  active grids: {roomsActive_Grid}");
         }
 
         private int SortBySize(Room A, Room B)
@@ -1022,95 +1110,6 @@ namespace MapGeneration
 
             return extents;
         }
-        
-        private void EnsureRoomConnectivityAStar()
-        {
-            if (_lastRooms == null || _lastCorridors == null) return;
-
-            // Build door list for each active room (one doorway per corridor segment touching it)
-            _roomDoors.Clear();
-            
-            // TODO: remove debug variables
-            int roomsIterated_Astar = 0;
-            int roomsActive_Astar = 0;
-            
-            foreach (Room r in _lastRooms)
-            {
-                roomsIterated_Astar++;
-                if (!r.TurnedOff)
-                {
-                    roomsActive_Astar++;
-                    _roomDoors[r] = new List<Vector2Int>();
-                }
-            }
-
-            // quick lookup: world position -> room
-            Dictionary<Vector2, Room> roomAt = new Dictionary<Vector2, Room>();
-            foreach (Room r in _lastRooms) 
-                if (!r.TurnedOff) roomAt[r.Position] = r;
-
-            // for each corridor segment, attach the endpoint that equals a room Center
-            foreach (Edge seg in _lastCorridors)
-            {
-                // If a corridor segment starts at a room center, carve a doorway there.
-                if (roomAt.TryGetValue(seg.GetPointA, out Room roomA) && _roomGrids.TryGetValue(roomA, out RoomGrid gridA))
-                {
-                    Vector2 dir = seg.GetPointB - seg.GetPointA; // toward midpoint
-                    Vector2Int door = CarveDoorOnBorder(gridA, roomA, dir);
-                    _roomDoors[roomA].Add(door);
-                    PaintDoorDebug(gridA, door.x, door.y);
-                }
-                // Likewise if it ends at a room center
-                if (roomAt.TryGetValue(seg.GetPointB, out Room roomB) && _roomGrids.TryGetValue(roomB, out RoomGrid gridB))
-                {
-                    Vector2 dir = seg.GetPointA - seg.GetPointB; // toward midpoint
-                    Vector2Int door = CarveDoorOnBorder(gridB, roomB, dir);
-                    _roomDoors[roomB].Add(door);
-                    PaintDoorDebug(gridB, door.x, door.y);
-                }
-            }
-            
-            // TODO: REMOVE debug stuff
-            int roomsWithDoors = 0;
-            foreach (KeyValuePair<Room, List<Vector2Int>> kv in _roomDoors)
-                if (kv.Value != null && kv.Value.Count > 0)
-                    roomsWithDoors++;
-            Debug.Log($"[A*] Rooms iterated: {roomsIterated_Astar}, active:  {roomsActive_Astar}, with doors:  {roomsWithDoors}");
-
-            // For each room, A* between every pair of its door tiles and then clear props in the way
-            foreach (KeyValuePair<Room, List<Vector2Int>> kv in _roomDoors)
-            {
-                Room room = kv.Key;
-                RoomGrid grid = _roomGrids[room];
-                List<Vector2Int> doors = kv.Value;
-
-                for (int i = 0; i < doors.Count; i++)
-                for (int j = i + 1; j < doors.Count; j++)
-                {
-                    Vector2Int start = doors[i];
-                    Vector2Int goal  = doors[j];
-
-                    List<Vector2Int> path = AStarPathfinder.FindPath(grid, start, goal);
-                    if (path == null) continue;
-
-                    // TODO: DEBUG: paint the A* path
-                    PaintPathDebug(grid, path);
-                    
-                    // Clear any props along the chosen path
-                    foreach (Vector2Int p in path)
-                    {
-                        if (!grid.InBounds(p.x, p.y)) continue;
-
-                        if (grid.Cells[p.x, p.y] == CellType.Prop)
-                        {
-                            grid.Cells[p.x, p.y] = CellType.Floor;
-                            Vector3Int w = grid.CellToWorld(p.x, p.y);
-                            _propMap.SetTile(w, null); // remove prop tile on the visual layer
-                        }
-                    }
-                }
-            }
-        }
 
         // Chooses which border to carve based on corridor direction.
         // Returns the interior cell (one tile inside the room) that we treat as the door node for A*.
@@ -1166,12 +1165,10 @@ namespace MapGeneration
                     grid.Cells[doorInterior.x, doorInterior.y] = CellType.Floor;
                     PaintDoorDebug(grid, doorInterior.x, doorInterior.y);
                 }
-                
+
                 return doorInterior;
             }
         }
-
-        
 
         private Vector2Int PickRandomInteriorFloor(RoomGrid g, System.Random rng, int maxTries = 64)
         {
@@ -1179,7 +1176,7 @@ namespace MapGeneration
 
             for (int t = 0; t < maxTries; t++)
             {
-                int gx = rng.Next(1, g.Width  - 1); // interior (excludes wall ring)
+                int gx = rng.Next(1, g.Width - 1); // interior (excludes wall ring)
                 int gy = rng.Next(1, g.Height - 1);
                 if (g.Cells[gx, gy] == CellType.Floor)
                     return new Vector2Int(gx, gy);
@@ -1187,16 +1184,15 @@ namespace MapGeneration
 
             // Fallback: first interior floor we can find
             for (int gx = 1; gx < g.Width - 1; gx++)
-            for (int gy = 1; gy < g.Height - 1; gy++)
-                if (g.Cells[gx, gy] == CellType.Floor)
-                    return new Vector2Int(gx, gy);
+                for (int gy = 1; gy < g.Height - 1; gy++)
+                    if (g.Cells[gx, gy] == CellType.Floor)
+                        return new Vector2Int(gx, gy);
 
             return new Vector2Int(0, 0); // degenerate
         }
 
-        
         // Node type moved to AStarPathfinder
-        
+
         private TileBase PickWeightedProp(System.Random rng)
         {
             if (_propSet == null || _propSet.Count == 0) return null;
@@ -1223,7 +1219,6 @@ namespace MapGeneration
             }
             return null;
         }
-
 
         private void OnDrawGizmos()
         {
@@ -1265,7 +1260,7 @@ namespace MapGeneration
                 }
             }
         }
-        
+
         private void PaintDoorDebug(RoomGrid grid, int gx, int gy)
         {
             if (_debugMap == null || _doorTile == null) return;
@@ -1319,7 +1314,7 @@ namespace MapGeneration
             _turnedOff = false;
         }
     }
-    
+
     public enum CellType { Empty, Floor, Wall, Prop, SpecialStart, SpecialEnd }
 
     public class RoomGrid
@@ -1343,34 +1338,34 @@ namespace MapGeneration
                 (int)r.Position.x - r.GetWidth,
                 (int)r.Position.y - r.GetHeight
             );
-            
-            Cells = new  CellType[Width, Height];
-            
+
+            Cells = new CellType[Width, Height];
+
             // set floor tiles
             for (int gx = 0; gx < Width; gx++)
                 for (int gy = 0; gy < Height; gy++)
                     Cells[gx, gy] = CellType.Floor;
-            
+
             // set wall tiles
             for (int gx = 0; gx < Width; gx++)
             {
                 Cells[gx, 0] = CellType.Wall;
-                Cells[gx, Height-1] = CellType.Wall;
+                Cells[gx, Height - 1] = CellType.Wall;
             }
 
             for (int gy = 0; gy < Height; gy++)
             {
                 Cells[0, gy] = CellType.Wall;
-                Cells[Width-1, gy] = CellType.Wall;
+                Cells[Width - 1, gy] = CellType.Wall;
             }
         }
-        
+
         public bool InBounds(int gx, int gy) =>
             gx >= 0 && gy >= 0 && gx < Width && gy < Height;
-        
+
         public Vector3Int CellToWorld(int gx, int gy) =>
             new Vector3Int(Origin.x + gx, Origin.y + gy, 0);
-        
+
         public Vector2Int WorldToCell(Vector3Int world) =>
             new Vector2Int(world.x - Origin.x, world.y - Origin.y);
     }
@@ -1398,7 +1393,7 @@ namespace MapGeneration
         // Return a list of local grid positions to occupy with props
         List<Vector2Int> Generate(RoomGrid grid, System.Random rng);
     }
-    
+
     // TODO: TEMP: very simple scatter routine to prove the pipe works.
     public class RandomScatterGenerator : IRoomContentGenerator
     {
@@ -1414,17 +1409,17 @@ namespace MapGeneration
             List<Vector2Int> results = new List<Vector2Int>();
             // if we allow for rooms this small, then they can't contain objects without blocking the walkway
             if (grid.Width <= 2 || grid.Height <= 2) return results;
-            
+
             // ignore 1-tile of padding for the walls
             int x0 = 1, y0 = 1, x1 = grid.Width - 2, y1 = grid.Height - 2;
             for (int gx = x0; gx <= x1; gx++)
-            for (int gy = y0; gy <= y1; gy++)
-            {
-                if (grid.Cells[gx, gy] != CellType.Floor) continue;
-                // Bernoulli trial
-                if (rng.NextDouble() < _density)
-                    results.Add(new Vector2Int(gx, gy));
-            }
+                for (int gy = y0; gy <= y1; gy++)
+                {
+                    if (grid.Cells[gx, gy] != CellType.Floor) continue;
+                    // Bernoulli trial
+                    if (rng.NextDouble() < _density)
+                        results.Add(new Vector2Int(gx, gy));
+                }
             return results;
         }
     }

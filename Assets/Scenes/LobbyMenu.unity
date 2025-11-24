@@ -2221,7 +2221,7 @@ MonoBehaviour:
   joinRoomButton: {fileID: 1610964223}
   playerListText: {fileID: 1177146791}
   startGameButton: {fileID: 604042110}
-  sceneName: DungeonGenerator
+  sceneName: ClassSelectionScreen
 --- !u!4 &1435867275
 Transform:
   m_ObjectHideFlags: 0

@@ -19,7 +19,7 @@ namespace DungeonGenerator.Character
         [SerializeField] private LayerMask lineOfSightObstacles = Physics2D.DefaultRaycastLayers;
         [SerializeField] private bool debugDrawLineOfSight;
 
-        private readonly List<Transform> trackedPlayers = new List<Transform>();
+        [SerializeField] private List<Transform> trackedPlayers = new List<Transform>();
         private Rigidbody2D body;
         private PlayerSpawnController spawnController;
 
@@ -74,7 +74,7 @@ namespace DungeonGenerator.Character
 
         private void CacheExistingPlayers()
         {
-            PlayerCharacterController[] players = FindObjectsOfType<PlayerCharacterController>();
+            PlayerCharacterController[] players = FindObjectsByType<PlayerCharacterController>(sortMode: FindObjectsSortMode.None);
             foreach (PlayerCharacterController player in players)
             {
                 RegisterPlayer(player.transform);

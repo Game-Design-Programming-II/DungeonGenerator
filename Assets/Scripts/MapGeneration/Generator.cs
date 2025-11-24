@@ -612,6 +612,24 @@ namespace MapGeneration
             ScatterPickups(grid, rng, blocked);
         }
 
+        private void UpdatePlayerSpawnPoint(Vector3Int cellPosition)
+        {
+            Vector3 worldPosition;
+
+            if (_floorMap != null)
+            {
+                worldPosition = _floorMap.GetCellCenterWorld(cellPosition);
+            }
+            else
+            {
+                worldPosition = new Vector3(cellPosition.x + 0.5f, cellPosition.y + 0.5f, cellPosition.z);
+            }
+
+            _playerSpawnWorldPosition = worldPosition;
+            _hasPlayerSpawn = true;
+            PlayerSpawnPointUpdated?.Invoke(_playerSpawnWorldPosition);
+        }
+
         // Place the dungeon exit marker and optional pickups.
         private void GenerateEndRoom(RoomAssignment assignment, System.Random rng)
         {
@@ -645,6 +663,33 @@ namespace MapGeneration
             ScatterPickups(grid, rng, blocked);
         }
 
+        // Fill the room with spike hazards according to the configured density.
+        private void SpawnSpikeTraps(RoomGrid grid, System.Random rng, HashSet<Vector2Int> blocked)
+        {
+            if (_spikeTrapPrefab == null || _spikeTrapDensity <= 0f)
+            {
+                Debug.LogWarning("[SpikePuzzle] Spike trap prefab or density is missing.");
+                return;
+            }
+
+            int interiorWidth = Mathf.Max(0, grid.Width - 2);
+            int interiorHeight = Mathf.Max(0, grid.Height - 2);
+            int targetCount = Mathf.Max(1, Mathf.RoundToInt(interiorWidth * interiorHeight * _spikeTrapDensity));
+
+            for (int i = 0; i < targetCount; i++)
+            {
+                if (!TryGetRandomFloorCell(grid, rng, blocked, out Vector2Int cell))
+                {
+                    Debug.LogWarning("[SpikePuzzle] Unable to place all spike traps.");
+                    break;
+                }
+
+                grid.Cells[cell.x, cell.y] = CellType.Prop;
+                SpawnPrefabAtCell(_spikeTrapPrefab, grid, cell);
+                blocked?.Add(cell);
+            }
+        }
+
         // Puzzle room that spawns a pressure plate per player.
         private void GeneratePressurePlateRoom(RoomAssignment assignment, System.Random rng)
         {
@@ -656,6 +701,31 @@ namespace MapGeneration
             ScatterPickups(grid, rng, blocked);
         }
 
+        // Spawn one pressure plate per player (real or expected) in this room.
+        private void SpawnPressurePlates(RoomGrid grid, System.Random rng, HashSet<Vector2Int> blocked)
+        {
+            if (_pressurePlatePrefab == null)
+            {
+                Debug.LogWarning("[PressurePuzzle] Pressure plate prefab not assigned.");
+                return;
+            }
+
+            int plateCount = Mathf.Max(1, GetPlayerCountEstimate());
+
+            for (int i = 0; i < plateCount; i++)
+            {
+                if (!TryGetRandomFloorCell(grid, rng, blocked, out Vector2Int cell))
+                {
+                    Debug.LogWarning("[PressurePuzzle] Unable to place all pressure plates.");
+                    break;
+                }
+
+                grid.Cells[cell.x, cell.y] = CellType.Prop;
+                SpawnPrefabAtCell(_pressurePlatePrefab, grid, cell);
+                blocked?.Add(cell);
+            }
+        }
+
         // Default room: props, one enemy type, and a sprinkle of pickups.
         private void GenerateCombatRoom(RoomAssignment assignment, System.Random rng)
         {
@@ -665,6 +735,35 @@ namespace MapGeneration
             ScatterProps(grid, rng, blocked);
             SpawnEnemiesInRoom(grid, rng, blocked);
             ScatterPickups(grid, rng, blocked);
+        }
+
+        // Distribute pick-up prefabs across floor tiles using a Bernoulli trial.
+        private void ScatterPickups(RoomGrid grid, System.Random rng, HashSet<Vector2Int> blocked)
+        {
+            if (_pickupPrefabs == null || _pickupPrefabs.Count == 0 || _pickupScatterDensity <= 0f) return;
+
+            int xMin = 1;
+            int xMax = grid.Width - 2;
+            int yMin = 1;
+            int yMax = grid.Height - 2;
+
+            for (int x = xMin; x <= xMax; x++)
+            {
+                for (int y = yMin; y <= yMax; y++)
+                {
+                    Vector2Int cell = new Vector2Int(x, y);
+                    if (!grid.InBounds(x, y)) continue;
+                    if (grid.Cells[x, y] != CellType.Floor) continue;
+                    if (blocked != null && blocked.Contains(cell)) continue;
+                    if (rng.NextDouble() > _pickupScatterDensity) continue;
+
+                    GameObject prefab = _pickupPrefabs[rng.Next(_pickupPrefabs.Count)];
+                    if (prefab == null) continue;
+
+                    SpawnPrefabAtCell(prefab, grid, cell);
+                    blocked?.Add(cell);
+                }
+            }
         }
 
         private void EnsureRoomConnectivityAStar()
@@ -851,86 +950,11 @@ namespace MapGeneration
             }
         }
 
-        // Distribute pick-up prefabs across floor tiles using a Bernoulli trial.
-        private void ScatterPickups(RoomGrid grid, System.Random rng, HashSet<Vector2Int> blocked)
-        {
-            if (_pickupPrefabs == null || _pickupPrefabs.Count == 0 || _pickupScatterDensity <= 0f) return;
+        
 
-            int xMin = 1;
-            int xMax = grid.Width - 2;
-            int yMin = 1;
-            int yMax = grid.Height - 2;
+        
 
-            for (int x = xMin; x <= xMax; x++)
-            {
-                for (int y = yMin; y <= yMax; y++)
-                {
-                    Vector2Int cell = new Vector2Int(x, y);
-                    if (!grid.InBounds(x, y)) continue;
-                    if (grid.Cells[x, y] != CellType.Floor) continue;
-                    if (blocked != null && blocked.Contains(cell)) continue;
-                    if (rng.NextDouble() > _pickupScatterDensity) continue;
-
-                    GameObject prefab = _pickupPrefabs[rng.Next(_pickupPrefabs.Count)];
-                    if (prefab == null) continue;
-
-                    SpawnPrefabAtCell(prefab, grid, cell);
-                    blocked?.Add(cell);
-                }
-            }
-        }
-
-        // Fill the room with spike hazards according to the configured density.
-        private void SpawnSpikeTraps(RoomGrid grid, System.Random rng, HashSet<Vector2Int> blocked)
-        {
-            if (_spikeTrapPrefab == null || _spikeTrapDensity <= 0f)
-            {
-                Debug.LogWarning("[SpikePuzzle] Spike trap prefab or density is missing.");
-                return;
-            }
-
-            int interiorWidth = Mathf.Max(0, grid.Width - 2);
-            int interiorHeight = Mathf.Max(0, grid.Height - 2);
-            int targetCount = Mathf.Max(1, Mathf.RoundToInt(interiorWidth * interiorHeight * _spikeTrapDensity));
-
-            for (int i = 0; i < targetCount; i++)
-            {
-                if (!TryGetRandomFloorCell(grid, rng, blocked, out Vector2Int cell))
-                {
-                    Debug.LogWarning("[SpikePuzzle] Unable to place all spike traps.");
-                    break;
-                }
-
-                grid.Cells[cell.x, cell.y] = CellType.Prop;
-                SpawnPrefabAtCell(_spikeTrapPrefab, grid, cell);
-                blocked?.Add(cell);
-            }
-        }
-
-        // Spawn one pressure plate per player (real or expected) in this room.
-        private void SpawnPressurePlates(RoomGrid grid, System.Random rng, HashSet<Vector2Int> blocked)
-        {
-            if (_pressurePlatePrefab == null)
-            {
-                Debug.LogWarning("[PressurePuzzle] Pressure plate prefab not assigned.");
-                return;
-            }
-
-            int plateCount = Mathf.Max(1, GetPlayerCountEstimate());
-
-            for (int i = 0; i < plateCount; i++)
-            {
-                if (!TryGetRandomFloorCell(grid, rng, blocked, out Vector2Int cell))
-                {
-                    Debug.LogWarning("[PressurePuzzle] Unable to place all pressure plates.");
-                    break;
-                }
-
-                grid.Cells[cell.x, cell.y] = CellType.Prop;
-                SpawnPrefabAtCell(_pressurePlatePrefab, grid, cell);
-                blocked?.Add(cell);
-            }
-        }
+        
 
         // Try to derive a live player count from the spawn controller, otherwise fallback.
         private int GetPlayerCountEstimate()
@@ -1031,23 +1055,7 @@ namespace MapGeneration
             }
         }
 
-        private void UpdatePlayerSpawnPoint(Vector3Int cellPosition)
-        {
-            Vector3 worldPosition;
-
-            if (_floorMap != null)
-            {
-                worldPosition = _floorMap.GetCellCenterWorld(cellPosition);
-            }
-            else
-            {
-                worldPosition = new Vector3(cellPosition.x + 0.5f, cellPosition.y + 0.5f, cellPosition.z);
-            }
-
-            _playerSpawnWorldPosition = worldPosition;
-            _hasPlayerSpawn = true;
-            PlayerSpawnPointUpdated?.Invoke(_playerSpawnWorldPosition);
-        }
+        
 
         private int SortBySize(Room A, Room B)
         {

@@ -1300,7 +1300,7 @@ MonoBehaviour:
   _spikeTrapDensity: 0.25
   _pressurePlatePrefab: {fileID: 5125463752471852338, guid: 1e14663a2e8d94a9683e8b9104f32250, type: 3}
   _doorTile: {fileID: 11400000, guid: 49645ad6b49a64f96b480f961bf4eb7a, type: 2}
-  _aStarTile: {fileID: 11400000, guid: fda4023edd94a47909d4e924ebc0cf51, type: 2}
+  _aStarTile: {fileID: 11400000, guid: 2cc674293a671134b9dabd29653ac1c2, type: 2}
   _debugMap: {fileID: 1048886281}
   healthBarController: {fileID: 2136506}
 --- !u!4 &1371193003

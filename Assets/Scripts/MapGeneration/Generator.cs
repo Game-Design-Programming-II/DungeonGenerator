@@ -111,11 +111,13 @@ namespace MapGeneration
 
         private void Update()
         {
+            #if UNITY_EDITOR
             if (Input.GetKeyDown(KeyCode.Tab))
             {
                 int seed = _seed != 0 ? _seed : (int)(System.DateTime.UtcNow.Ticks & 0x7FFFFFFF);
                 GenerateWithSeed(seed);
             }
+            #endif
         }
 
         public void GenerateWithSeed(int seed)

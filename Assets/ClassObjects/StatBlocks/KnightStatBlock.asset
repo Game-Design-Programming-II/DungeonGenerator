@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0621dbf6195544d0eaf05010b89ff62e, type: 3}
+  m_Name: KnightStatBlock
+  m_EditorClassIdentifier: 
+  entries:
+  - stat: 0
+    baseValue: 20
+    perLevel: 10
+  - stat: 1
+    baseValue: 10
+    perLevel: 3
+  - stat: 2
+    baseValue: 8
+    perLevel: 4
+  - stat: 3
+    baseValue: 3
+    perLevel: 1
+  - stat: 4
+    baseValue: 6
+    perLevel: 3
+  - stat: 5
+    baseValue: 5
+    perLevel: 2
+  - stat: 6
+    baseValue: 1
+    perLevel: 0.3

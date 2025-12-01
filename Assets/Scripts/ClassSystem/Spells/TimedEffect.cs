@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using UnityEngine;
 using ClassSystem.Combat;
@@ -19,6 +20,13 @@ namespace ClassSystem.Spells
         {
             Stop();
             _routine = StartCoroutine(RunHOT(spell, caster));
+            return this;
+        }
+
+        public TimedEffect ApplyShieldOverTime(Spell spell, Transform caster)
+        {
+            Stop();
+            _routine = StartCoroutine(RunSOT(spell, caster));
             return this;
         }
 
@@ -53,6 +61,11 @@ namespace ClassSystem.Spells
                 yield return new WaitForSeconds(tick);
             }
             Destroy(this);
+        }
+
+        IEnumerator RunSOT(Spell spell, Transform caster)
+        {
+            throw new NotImplementedException();
         }
 
         void Stop()

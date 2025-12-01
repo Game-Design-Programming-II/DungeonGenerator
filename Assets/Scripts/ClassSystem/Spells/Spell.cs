@@ -6,7 +6,7 @@ using ClassSystem.Core.Utilities;
 namespace ClassSystem.Spells
 {
     public enum SpellTargetingMode { Self, Projectile }
-    public enum SpellEffectKind { Damage, Heal }
+    public enum SpellEffectKind { Damage, Heal, Shield }
 
     [CreateAssetMenu(menuName = "RPG/Spell", fileName = "New Spell")]
     public class Spell : ScriptableObject

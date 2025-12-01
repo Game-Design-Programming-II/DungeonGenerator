@@ -50,29 +50,35 @@ namespace ClassSystem.Runtime
         void ApplySelf(Spell spell)
         {
             var target = (IDamageable)_stats;
-            if (spell.effect == SpellEffectKind.Damage)
+            switch (spell.effect)
             {
-                if (spell.continuous)
-                {
-                    gameObject.AddComponent<TimedEffect>().BeginDamageOverTime(spell, transform);
-                }
-                else
-                {
-                    var amt = spell.RollAmount();
-                    var bundle = new DamageBundle(new DamagePacket { type = spell.element, amount = amt });
-                    target.ReceiveDamage(bundle, this);
-                }
-            }
-            else // Heal
-            {
-                if (spell.continuous)
-                {
-                    gameObject.AddComponent<TimedEffect>().BeginHealOverTime(spell, transform);
-                }
-                else
-                {
-                    target.ReceiveHealing(spell.RollAmount(), this);
-                }
+                case SpellEffectKind.Damage:
+                    if (spell.continuous)
+                    {
+                        gameObject.AddComponent<TimedEffect>().BeginDamageOverTime(spell, transform);
+                    }
+                    else
+                    {
+                        var amt = spell.RollAmount();
+                        var bundle = new DamageBundle(new DamagePacket { type = spell.element, amount = amt });
+                        target.ReceiveDamage(bundle, this);
+                    }
+                    break;
+                case SpellEffectKind.Heal:
+                    if (spell.continuous)
+                    {
+                        gameObject.AddComponent<TimedEffect>().BeginHealOverTime(spell, transform);
+                    }
+                    else
+                    {
+                        target.ReceiveHealing(spell.RollAmount(), this);
+                    }
+                    break;
+                case SpellEffectKind.Shield:
+                    gameObject.AddComponent<TimedEffect>().ApplyShieldOverTime(spell, transform);
+                    break;
+                default:
+                    break;
             }
         }
 

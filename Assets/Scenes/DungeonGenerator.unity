@@ -1273,8 +1273,8 @@ MonoBehaviour:
   _propMap: {fileID: 1942348628}
   _wallCollider: {fileID: 228086547}
   _wallComposite: {fileID: 228086548}
-  _floorTile: {fileID: 11400000, guid: 5808421d105704a72a11f89e5b7d3efa, type: 2}
-  _wallTile: {fileID: 11400000, guid: 94cf6d2f85f314cb8818f00bf44f9d16, type: 2}
+  _floorTile: {fileID: 11400000, guid: 2cc674293a671134b9dabd29653ac1c2, type: 2}
+  _wallTile: {fileID: 11400000, guid: 1ad2aef1a68d6944c8c6c122d44b3529, type: 2}
   _endTile: {fileID: 11400000, guid: ac63da5f6ed3d4e08a720d06b161ddb7, type: 2}
   _propScatterDensity: 0.208
   _propSet:
@@ -1300,7 +1300,7 @@ MonoBehaviour:
   _spikeTrapDensity: 0.25
   _pressurePlatePrefab: {fileID: 5125463752471852338, guid: 1e14663a2e8d94a9683e8b9104f32250, type: 3}
   _doorTile: {fileID: 11400000, guid: 49645ad6b49a64f96b480f961bf4eb7a, type: 2}
-  _aStarTile: {fileID: 11400000, guid: fda4023edd94a47909d4e924ebc0cf51, type: 2}
+  _aStarTile: {fileID: 11400000, guid: 184ffb66ee14e5d42986bbd3a2d67ec5, type: 2}
   _debugMap: {fileID: 1048886281}
   healthBarController: {fileID: 2136506}
 --- !u!4 &1371193003

@@ -34,19 +34,28 @@ namespace DungeonGenerator.Character
         {
             spawnController = FindAnyObjectByType<PlayerSpawnController>();
             CacheExistingPlayers();
-
+            
+            /*
             if (spawnController != null)
             {
                 spawnController.PlayerSpawned += HandlePlayerSpawned;
             }
+            */
+
+            GameManager.instance.updatePlayers += UpdatePlayerTargets;
+            UpdatePlayerTargets(GameManager.instance.GetPlayers);
         }
 
         private void OnDisable()
         {
+            /*
             if (spawnController != null)
             {
                 spawnController.PlayerSpawned -= HandlePlayerSpawned;
             }
+            */
+
+            GameManager.instance.updatePlayers -= UpdatePlayerTargets;
         }
 
         private void FixedUpdate()
@@ -74,7 +83,7 @@ namespace DungeonGenerator.Character
 
         private void CacheExistingPlayers()
         {
-            PlayerCharacterController[] players = FindObjectsOfType<PlayerCharacterController>();
+            PlayerCharacterController[] players = FindObjectsByType<PlayerCharacterController>(sortMode: FindObjectsSortMode.None);
             foreach (PlayerCharacterController player in players)
             {
                 RegisterPlayer(player.transform);
@@ -106,6 +115,15 @@ namespace DungeonGenerator.Character
             if (!trackedPlayers.Contains(playerTransform))
             {
                 trackedPlayers.Add(playerTransform);
+            }
+        }
+
+        private void UpdatePlayerTargets(Dictionary<PlayerDataContainer, Transform> players)
+        {
+            trackedPlayers.Clear();
+            foreach (KeyValuePair<PlayerDataContainer, Transform> player in players)
+            {
+                trackedPlayers.Add(player.Value);
             }
         }
 
@@ -171,6 +189,15 @@ namespace DungeonGenerator.Character
         {
             Gizmos.color = Color.yellow;
             Gizmos.DrawWireSphere(transform.position, detectionRange);
+            
+        }
+
+        private void OnDrawGizmos()
+        {
+            for (int i = 0; i < trackedPlayers.Count; i++)
+            {
+                Debug.DrawLine(transform.position, trackedPlayers[i].transform.position);
+            }
         }
 #endif
     }

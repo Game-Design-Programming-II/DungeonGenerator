@@ -1,22 +1,22 @@
 fileFormatVersion: 2
-guid: fdf3bb6b277ee50438df2edfc8e342c3
+guid: 78aa64e8619781a4ebb6e7cabf4aee21
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 5807679426015444619
-    second: LenkIdleHighlighted-Sheet_0
+      213: 7784140936367565531
+    second: BillSideSkill_0
   - first:
-      213: 5778466476453527733
-    second: LenkIdleHighlighted-Sheet_1
+      213: -395271895096505521
+    second: BillSideSkill_1
   - first:
-      213: -5242973145599818477
-    second: LenkIdleHighlighted-Sheet_2
+      213: 3470587369689107597
+    second: BillSideSkill_2
   - first:
-      213: -8083217354901371841
-    second: LenkIdleHighlighted-Sheet_3
+      213: -2349001529965208807
+    second: BillSideSkill_3
   - first:
-      213: -6192904952190263337
-    second: LenkIdleHighlighted-Sheet_4
+      213: 3375033466292729928
+    second: BillSideSkill_4
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -112,111 +112,111 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: LenkIdleHighlighted-Sheet_0
+      name: BillSideSkill_0
       rect:
         serializedVersion: 2
-        x: 0
+        x: 4
         y: 0
-        width: 16
+        width: 10
         height: 17
-      alignment: 9
-      pivot: {x: 0.525, y: 0.5}
+      alignment: 0
+      pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: b8ebef4eaa5099050800000000000000
-      internalID: 5807679426015444619
+      spriteID: bdae3c180f2d60c60800000000000000
+      internalID: 7784140936367565531
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: LenkIdleHighlighted-Sheet_1
+      name: BillSideSkill_1
       rect:
         serializedVersion: 2
-        x: 16
+        x: 19
         y: 0
-        width: 16
+        width: 10
         height: 17
-      alignment: 9
-      pivot: {x: 0.525, y: 0.5}
+      alignment: 0
+      pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 5b0048b05ac313050800000000000000
-      internalID: 5778466476453527733
+      spriteID: f4bc31f3e46b38af0800000000000000
+      internalID: -395271895096505521
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: LenkIdleHighlighted-Sheet_2
+      name: BillSideSkill_2
       rect:
         serializedVersion: 2
-        x: 32
+        x: 35
         y: 0
-        width: 16
+        width: 10
         height: 17
-      alignment: 9
-      pivot: {x: 0.525, y: 0.5}
+      alignment: 0
+      pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 3154c99d3b73d37b0800000000000000
-      internalID: -5242973145599818477
+      spriteID: d8cc64423d00a2030800000000000000
+      internalID: 3470587369689107597
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: LenkIdleHighlighted-Sheet_3
+      name: BillSideSkill_3
       rect:
         serializedVersion: 2
-        x: 48
+        x: 51
         y: 0
-        width: 16
+        width: 10
         height: 17
-      alignment: 9
-      pivot: {x: 0.525, y: 0.5}
+      alignment: 0
+      pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: f34c4d674a4a2df80800000000000000
-      internalID: -8083217354901371841
+      spriteID: 91b1395dd8ba66fd0800000000000000
+      internalID: -2349001529965208807
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: LenkIdleHighlighted-Sheet_4
+      name: BillSideSkill_4
       rect:
         serializedVersion: 2
-        x: 64
+        x: 67
         y: 0
-        width: 16
+        width: 10
         height: 17
-      alignment: 9
-      pivot: {x: 0.525, y: 0.5}
+      alignment: 0
+      pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 7df11f4e1c16e0aa0800000000000000
-      internalID: -6192904952190263337
+      spriteID: 848fe6f4e0786de20800000000000000
+      internalID: 3375033466292729928
       vertices: []
       indices: 
       edges: []
@@ -225,7 +225,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 294dedafefe5a6747999c218f4a12302
+    spriteID: 
     internalID: 0
     vertices: []
     indices: 
@@ -235,11 +235,11 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      LenkIdleHighlighted-Sheet_0: 5807679426015444619
-      LenkIdleHighlighted-Sheet_1: 5778466476453527733
-      LenkIdleHighlighted-Sheet_2: -5242973145599818477
-      LenkIdleHighlighted-Sheet_3: -8083217354901371841
-      LenkIdleHighlighted-Sheet_4: -6192904952190263337
+      BillSideSkill_0: 7784140936367565531
+      BillSideSkill_1: -395271895096505521
+      BillSideSkill_2: 3470587369689107597
+      BillSideSkill_3: -2349001529965208807
+      BillSideSkill_4: 3375033466292729928
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

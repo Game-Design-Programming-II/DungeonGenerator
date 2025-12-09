@@ -25,6 +25,7 @@ namespace DungeonGenerator.Character
         private PlayerSpawnController spawnController;
 
         private Animator anim;
+        private bool isAttacking = false;
 
         private void Awake()
         {
@@ -65,6 +66,13 @@ namespace DungeonGenerator.Character
 
         private void FixedUpdate()
         {
+            if (isAttacking)
+            {
+                body.linearVelocity = Vector2.zero;
+                anim.SetFloat("moveSpeed", 0f);
+                return;
+            }
+
             CleanupNullTargets();
             Transform target = AcquireVisibleTarget();
 
@@ -75,10 +83,11 @@ namespace DungeonGenerator.Character
                 if(distance <= 1.2f)
                 {
                     anim.SetTrigger("attack");
-
+                    isAttacking = true;
                     body.linearVelocity = Vector2.zero;
                     return;
                 }
+
                 Vector2 toTarget = target.position - transform.position;
                 Vector2 desiredVelocity = toTarget.normalized * moveSpeed;
                 body.linearVelocity = Vector2.MoveTowards(
@@ -100,6 +109,11 @@ namespace DungeonGenerator.Character
             anim.SetFloat("moveY", vel.y);
             anim.SetFloat("moveSpeed", vel.magnitude);
 
+        }
+
+        public void EndAttack()
+        {
+            isAttacking = false;
         }
 
         private void CacheExistingPlayers()

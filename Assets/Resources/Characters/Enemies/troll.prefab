@@ -153,7 +153,7 @@ GameObject:
   - component: {fileID: 7016206523475529383}
   - component: {fileID: 6088495075702635795}
   - component: {fileID: 5631310528049065155}
-  - component: {fileID: 692767588096904719}
+  - component: {fileID: -3604706498020736236}
   m_Layer: 10
   m_Name: troll
   m_TagString: Enemy
@@ -336,25 +336,25 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 128
   debugDrawLineOfSight: 1
---- !u!95 &692767588096904719
-Animator:
-  serializedVersion: 7
+--- !u!114 &-3604706498020736236
+MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 5716440746491455975}
   m_Enabled: 1
-  m_Avatar: {fileID: 0}
-  m_Controller: {fileID: 9100000, guid: d6c6ab75e54610c449cebd5064088fa9, type: 2}
-  m_CullingMode: 0
-  m_UpdateMode: 0
-  m_ApplyRootMotion: 0
-  m_LinearVelocityBlending: 0
-  m_StabilizeFeet: 0
-  m_AnimatePhysics: 0
-  m_WarningMessage: 
-  m_HasTransformHierarchy: 1
-  m_AllowConstantClipSamplingOptimization: 1
-  m_KeepAnimatorStateOnDisable: 0
-  m_WriteDefaultValuesOnDisable: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aa584fbee541324448dd18d8409c7a41, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ObservedComponentsFoldoutOpen: 1
+  Group: 0
+  prefixField: -1
+  Synchronization: 3
+  OwnershipTransfer: 0
+  observableSearch: 1
+  ObservedComponents: []
+  sceneViewId: 0
+  InstantiationId: 0
+  isRuntimeInstantiated: 0

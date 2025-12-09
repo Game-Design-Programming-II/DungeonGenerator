@@ -40,6 +40,7 @@ namespace DungeonGenerator.Character
 
         private Rigidbody2D body;
         private PlayerInput playerInput;
+        private Animator animator;
 
         private InputAction moveAction;
         private InputAction attackAction;
@@ -73,6 +74,7 @@ namespace DungeonGenerator.Character
             body.freezeRotation = true;
             body.interpolation = RigidbodyInterpolation2D.Interpolate;
             playerInput = GetComponent<PlayerInput>();
+            animator = GetComponent<Animator>();
             ConfigureSpriteRenderer();
         }
 
@@ -208,6 +210,8 @@ namespace DungeonGenerator.Character
         private void OnMove(InputAction.CallbackContext context)
         {
             moveInput = context.ReadValue<Vector2>();
+            animator.SetFloat("X", moveInput.x);
+            animator.SetFloat("Y", moveInput.y);
         }
 
         private void OnAttackPerformed(InputAction.CallbackContext context)

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Photon.Pun;
 using UnityEngine;
 
 namespace DungeonGenerator.Character
@@ -8,7 +9,7 @@ namespace DungeonGenerator.Character
     /// Requires a Rigidbody2D and optionally subscribes to PlayerSpawnController.
     /// </summary>
     [RequireComponent(typeof(Rigidbody2D))]
-    public class EnemyBehavior : MonoBehaviour
+    public class EnemyBehavior : MonoBehaviour, IPunObservable
     {
         [Header("Movement")]
         [SerializeField] private float moveSpeed = 2.5f;
@@ -38,7 +39,7 @@ namespace DungeonGenerator.Character
         {
             spawnController = FindAnyObjectByType<PlayerSpawnController>();
             CacheExistingPlayers();
-            
+
             /*
             if (spawnController != null)
             {
@@ -195,12 +196,24 @@ namespace DungeonGenerator.Character
             return !blocked;
         }
 
+        public void OnPhotonSerializeView(PhotonStream stream, PhotonMessageInfo info)
+        {
+            if (stream.IsWriting)
+            {
+                stream.SendNext(transform.position);
+            }
+            else if (stream.IsReading)
+            {
+                transform.position = (Vector3)stream.ReceiveNext();
+            }
+        }
+
 #if UNITY_EDITOR
         private void OnDrawGizmosSelected()
         {
             Gizmos.color = Color.yellow;
             Gizmos.DrawWireSphere(transform.position, detectionRange);
-            
+
         }
 
         private void OnDrawGizmos()

@@ -7,12 +7,18 @@ public class GameManager : MonoBehaviour
     public static GameManager instance;   
     private Dictionary<PlayerDataContainer, Transform> players = new Dictionary<PlayerDataContainer, Transform>();
     public event Action<Dictionary<PlayerDataContainer, Transform>> updatePlayers;
-
     public Dictionary<PlayerDataContainer, Transform> GetPlayers { get{return players;}}
 
     void Awake()
     {
-        instance = this;
+        if (instance == null)
+        {
+            instance = this;
+        }
+        else if (instance != this)
+        {
+            Destroy(gameObject);
+        }
     }
 
     public void SubscribePlayer(PlayerDataContainer player)

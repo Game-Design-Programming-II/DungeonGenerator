@@ -2,6 +2,7 @@ using UnityEngine;
 
 public class ClassSelection : MonoBehaviour
 {
+    [SerializeField] private ClassSelection[] _buttons;
     [SerializeField] private GameManager _gM;
     [SerializeField] private Animator _anim;
     [SerializeField] private AudioSource _aS;
@@ -25,7 +26,20 @@ public class ClassSelection : MonoBehaviour
     private void OnMouseDown()
     {
         _selected = !_selected;
+        if (_selected)
+        {
+            foreach (ClassSelection item in _buttons)
+            {
+                item.IsSelected(false);
+            }
+        }
         _gM.SelectClass(_classID);
         _aS.Play();
+    }
+
+    public void IsSelected(bool boo)
+    {
+        _selected = boo;
+        _anim.SetBool("hovered", false);
     }
 }

@@ -70,6 +70,15 @@ namespace DungeonGenerator.Character
 
             if (target != null)
             {
+                float distance = Vector2.Distance(transform.position, target.position);
+
+                if(distance <= 1.2f)
+                {
+                    anim.SetTrigger("attack");
+
+                    body.linearVelocity = Vector2.zero;
+                    return;
+                }
                 Vector2 toTarget = target.position - transform.position;
                 Vector2 desiredVelocity = toTarget.normalized * moveSpeed;
                 body.linearVelocity = Vector2.MoveTowards(

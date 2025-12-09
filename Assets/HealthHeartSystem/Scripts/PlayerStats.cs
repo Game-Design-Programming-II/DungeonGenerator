@@ -72,4 +72,11 @@ public class PlayerStats : MonoBehaviour
     {
         hasKey = change;
     }
+    public void Update()
+    {
+        if ((health == 0))
+        {
+            Destroy(this);
+        }
+    }
 }

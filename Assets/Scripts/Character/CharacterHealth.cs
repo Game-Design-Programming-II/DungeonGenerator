@@ -2,11 +2,12 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 using Common;
+using Photon.Pun;
 
 namespace Character
 {
     // Holds health and applies typed damage/healing including over-time effects.
-    public class CharacterHealth : MonoBehaviour
+    public class CharacterHealth : MonoBehaviour, IPunObservable
     {
         [Header("Health")]
         [Tooltip("Maximum health points.")]
@@ -114,6 +115,18 @@ namespace Character
         private void RaiseHealthChanged()
         {
             OnHealthChanged?.Invoke(currentHealth, maxHealth);
+        }
+
+        public void OnPhotonSerializeView(PhotonStream stream, PhotonMessageInfo info)
+        {
+            if (stream.IsWriting)
+            {
+                stream.SendNext(currentHealth);
+            }
+            else if (stream.IsReading)
+            {
+                currentHealth = (float)stream.ReceiveNext();
+            }
         }
     }
 }

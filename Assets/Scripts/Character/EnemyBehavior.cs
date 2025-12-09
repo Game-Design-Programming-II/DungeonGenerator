@@ -23,11 +23,15 @@ namespace DungeonGenerator.Character
         private Rigidbody2D body;
         private PlayerSpawnController spawnController;
 
+        private Animator anim;
+
         private void Awake()
         {
             body = GetComponent<Rigidbody2D>();
             body.gravityScale = 0f;
             body.freezeRotation = true;
+            anim = GetComponent<Animator>();
+
         }
 
         private void OnEnable()
@@ -79,6 +83,13 @@ namespace DungeonGenerator.Character
                     Vector2.zero,
                     acceleration * Time.fixedDeltaTime);
             }
+
+            Vector2 vel = body.linearVelocity;
+
+            anim.SetFloat("moveX", vel.x);
+            anim.SetFloat("moveY", vel.y);
+            anim.SetFloat("moveSpeed", vel.magnitude);
+
         }
 
         private void CacheExistingPlayers()

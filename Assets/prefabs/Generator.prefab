@@ -1,0 +1,95 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &8723715835089757528
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 4104798504536669978}
+  - component: {fileID: 2194348257679921646}
+  m_Layer: 0
+  m_Name: Generator
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &4104798504536669978
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8723715835089757528}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2194348257679921646
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8723715835089757528}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 75a9495456577467daf04c0f11177a1e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _numberOfRooms:
+    _minValue: 50
+    _maxValue: 100
+  _roomSize:
+    _minValue: 5
+    _maxValue: 10
+  _separationRange:
+    _minValue: 3
+    _maxValue: 5
+  _refreshCounterMax: 50
+  _cullingPercent: 0.28
+  _superTriangleOffset: 100
+  _edgeReconnectionPercent: 0.1
+  _tilemap: {fileID: 0}
+  _floorMap: {fileID: 0}
+  _wallMap: {fileID: 0}
+  _propMap: {fileID: 0}
+  _wallCollider: {fileID: 0}
+  _wallComposite: {fileID: 0}
+  _floorTile: {fileID: 11400000, guid: 2cc674293a671134b9dabd29653ac1c2, type: 2}
+  _wallTile: {fileID: 11400000, guid: 1ad2aef1a68d6944c8c6c122d44b3529, type: 2}
+  _endTile: {fileID: 11400000, guid: ac63da5f6ed3d4e08a720d06b161ddb7, type: 2}
+  _propScatterDensity: 0.208
+  _propSet:
+  - tile: {fileID: 11400000, guid: b71698dcb74fa4e35911ea826a4d818f, type: 2}
+    weight: 1
+  - tile: {fileID: 11400000, guid: caee915dfb9c94ee5b115cdd8e20d7cd, type: 2}
+    weight: 2
+  - tile: {fileID: 11400000, guid: 78ac411c4c0034a4fa38d4f7c6e53093, type: 2}
+    weight: 1
+  - tile: {fileID: 11400000, guid: 602c7089d40d84786a6e0739b59affa9, type: 2}
+    weight: 0.5
+  _runtimeContentParent: {fileID: 0}
+  _enemyTypes:
+  - id: Troll
+    prefab: {fileID: 5716440746491455975, guid: 4cae7afb1096b4796a4488ef8951c076, type: 3}
+    countRange: {x: 2, y: 5}
+  _fallbackEnemyCount: {x: 1, y: 3}
+  _pickupScatterDensity: 0.1
+  _pickupPrefabs:
+  - {fileID: 1787059138744807743, guid: 8b9a9d9763a604d47acd5b4b299f0aec, type: 3}
+  _expectedPlayerCount: 1
+  _spikeTrapPrefab: {fileID: 7965784340935701847, guid: 02b5f1f5677d148c6b4edeaabbe444dd, type: 3}
+  _spikeTrapDensity: 0.25
+  _pressurePlatePrefab: {fileID: 5125463752471852338, guid: 1e14663a2e8d94a9683e8b9104f32250, type: 3}
+  _doorTile: {fileID: 0}
+  _aStarTile: {fileID: 0}
+  _debugMap: {fileID: 0}
+  healthBarController: {fileID: 0}

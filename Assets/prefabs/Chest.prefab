@@ -14,7 +14,7 @@ GameObject:
   - component: {fileID: 7219013421703440801}
   m_Layer: 0
   m_Name: Chest
-  m_TagString: Untagged
+  m_TagString: Chest
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -148,4 +148,4 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _openSprite: {fileID: 2322430220157786358, guid: 0a14c2b21e6fc5b4d915203012e9f427, type: 3}
-  _canvas: {fileID: 167897607962136328, guid: b79d8f0cf578c5a4689c6450add60d0e, type: 3}
+  _canvas: {fileID: 368127310307848461, guid: 65dbcc188225052409e67d5462d21305, type: 3}

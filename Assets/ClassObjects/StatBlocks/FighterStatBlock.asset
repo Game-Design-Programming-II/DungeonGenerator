@@ -10,27 +10,27 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 0621dbf6195544d0eaf05010b89ff62e, type: 3}
-  m_Name: KnightStatBlock
+  m_Name: FighterStatBlock
   m_EditorClassIdentifier: 
   entries:
   - stat: 0
-    baseValue: 20
-    perLevel: 10
+    baseValue: 16
+    perLevel: 8
   - stat: 1
     baseValue: 10
     perLevel: 3
   - stat: 2
-    baseValue: 8
-    perLevel: 4
+    baseValue: 6
+    perLevel: 3
   - stat: 3
     baseValue: 3
     perLevel: 1
   - stat: 4
-    baseValue: 6
-    perLevel: 3
+    baseValue: 8
+    perLevel: 4
   - stat: 5
-    baseValue: 5
-    perLevel: 5
+    baseValue: 4
+    perLevel: 2
   - stat: 6
     baseValue: 1
     perLevel: 0.3

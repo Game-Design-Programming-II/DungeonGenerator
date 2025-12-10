@@ -5,6 +5,7 @@ using TMPro;
 using Photon.Pun;
 using Photon.Realtime;
 using Unity.VisualScripting;
+using ExitGames.Client.Photon;
 
 [RequireComponent(typeof(PhotonView))]
 public class MenuUI : MonoBehaviourPunCallbacks
@@ -12,10 +13,14 @@ public class MenuUI : MonoBehaviourPunCallbacks
     [Header("Screens")]
     public GameObject mainScreen;
     public GameObject lobbyScreen;
+    public GameObject classSelectScreen;
 
     [Header("Main Screen")]
     public Button createRoomButton;
     public Button joinRoomButton;
+
+    [Header("Class Select Screen")]
+    public ClassSelectUI classSelectUI;
 
     [Header("Lobby Screen")]
     public TextMeshProUGUI playerListText;
@@ -53,6 +58,7 @@ public class MenuUI : MonoBehaviourPunCallbacks
     {
         mainScreen.SetActive(false);
         lobbyScreen.SetActive(false);
+        classSelectScreen.SetActive(false);
         screen.SetActive(true);
     }
 
@@ -74,26 +80,22 @@ public class MenuUI : MonoBehaviourPunCallbacks
     public void UpdateLobbyUI()
     {
         playerListText.text = "";
+        bool allHaveClass = true;
         foreach (Player player in PhotonNetwork.PlayerList)
         {
-            playerListText.text += $"{player.ActorNumber} : {player.NickName}\n";
+            string className = ResolveClassName(player, out bool hasClass);
+            if (!hasClass) allHaveClass = false;
+            playerListText.text += $"{player.ActorNumber} : {player.NickName} [{className}]\n";
         }
 
-        if (PhotonNetwork.IsMasterClient)
-        {
-            startGameButton.interactable = true;
-        }
-        else
-        {
-            startGameButton.interactable = false;
-        }
+        startGameButton.interactable = PhotonNetwork.IsMasterClient && allHaveClass;
     }
 
     public override void OnJoinedRoom()
     {
         //base.OnJoinedRoom();
-        SetScreen(lobbyScreen);
-        UpdateLobbyUI();
+        SetScreen(classSelectScreen);
+        classSelectUI?.HydrateFromProperties();
     }
 
     public override void OnPlayerEnteredRoom(Player newPlayer)
@@ -118,6 +120,18 @@ public class MenuUI : MonoBehaviourPunCallbacks
     {
         PhotonNetwork.LeaveRoom();
         SetScreen(mainScreen);
+    }
+
+    public void OnClassSelectContinue()
+    {
+        classSelectUI?.HydrateFromProperties();
+        if (classSelectUI != null && !classSelectUI.HasSelection)
+        {
+            Debug.LogWarning("[MenuUI] Cannot continue to lobby without selecting a class.");
+            return;
+        }
+        SetScreen(lobbyScreen);
+        UpdateLobbyUI();
     }
 
     public void StartGameButton()
@@ -150,5 +164,29 @@ public class MenuUI : MonoBehaviourPunCallbacks
         {
             Debug.LogError("[MenuUI] MultiplayerGameManager PhotonView not found; BeginMatch not sent.");
         }
+    }
+
+    private string ResolveClassName(Player player, out bool hasClass)
+    {
+        hasClass = false;
+        if (player == null)
+        {
+            return "No class";
+        }
+
+        if (player.CustomProperties != null &&
+            player.CustomProperties.TryGetValue("classId", out object value) &&
+            value is int idx &&
+            idx >= 0)
+        {
+            hasClass = true;
+            if (classSelectUI != null && idx < classSelectUI.ClassCount)
+            {
+                return classSelectUI.GetClassName(idx);
+            }
+            return $"Class {idx}";
+        }
+
+        return "No class";
     }
 }

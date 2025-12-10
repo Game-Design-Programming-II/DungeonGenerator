@@ -110,6 +110,13 @@ namespace Networking
             RegisterPlayerInstance(PhotonNetwork.LocalPlayer.ActorNumber, playerObject);
             localPlayerSpawned = true;
 
+            // Apply selected class loadout if present
+            var loadout = playerObject.GetComponent<NetworkPlayerLoadout>();
+            if (loadout == null)
+            {
+                loadout = playerObject.AddComponent<NetworkPlayerLoadout>();
+            }
+
             // Notify listeners (camera, UI, etc.) that our local player exists.
             try
             {

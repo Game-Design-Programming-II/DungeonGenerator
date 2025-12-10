@@ -10,16 +10,13 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5918cc017cb2e43929ffaf8c74c7bfe5, type: 3}
-  m_Name: WizardClass
+  m_Name: FighterClass
   m_EditorClassIdentifier: 
-  displayName: Lank
+  displayName: Lenk
   icon: {fileID: 0}
   levelingProfile: {fileID: 11400000, guid: 1563f0955dc424a8fb08f73c0ffd3843, type: 2}
-  statBlock: {fileID: 11400000, guid: aa10e68462dbd4d189c3c8b2f3d1f953, type: 2}
+  statBlock: {fileID: 11400000, guid: e877c2dedf1de4ee885a2fe8d6fd22ed, type: 2}
   allowedWeaponTypes:
-  - {fileID: 11400000, guid: f69d0daae93464539b92042a4c221f1a, type: 2}
-  - {fileID: 11400000, guid: 1cb76fedfa966461eb41be8fa8c606b0, type: 2}
-  knownSpells:
-  - {fileID: 11400000, guid: aea8edb19c8cd48bda9998f526328388, type: 2}
-  - {fileID: 11400000, guid: c68db7bab65ec4a22838c7ca6d7ccfa8, type: 2}
-  - {fileID: 11400000, guid: 75a84718e57c54a91b11f461d3963193, type: 2}
+  - {fileID: 11400000, guid: 99cec545ffb3b4b158c8beb09935d102, type: 2}
+  - {fileID: 11400000, guid: d0b459b7ecb9b4026997927bc781880c, type: 2}
+  knownSpells: []

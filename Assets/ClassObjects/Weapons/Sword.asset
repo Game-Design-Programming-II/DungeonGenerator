@@ -10,13 +10,13 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3b02a96cdcb7d4271814b99ee1988a55, type: 3}
-  m_Name: BasicWand
+  m_Name: Sword
   m_EditorClassIdentifier: 
-  weaponType: {fileID: 11400000, guid: f69d0daae93464539b92042a4c221f1a, type: 2}
+  weaponType: {fileID: 11400000, guid: d0b459b7ecb9b4026997927bc781880c, type: 2}
   damage:
-  - type: {fileID: 11400000, guid: cbfe4563f2ea448928d2274ad1b0df92, type: 2}
-    baseAmount: 1
+  - type: {fileID: 11400000, guid: 07a07656e26ad43b1bfccb401ac37f48, type: 2}
+    baseAmount: 3
     dice:
-    - count: 1
-      sides: 12
-  attackCooldown: 0.7
+    - count: 2
+      sides: 6
+  attackCooldown: 0.5

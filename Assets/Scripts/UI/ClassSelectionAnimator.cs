@@ -1,13 +1,21 @@
+using System;
+using System.Collections.Generic;
+using ClassSystem.Classes;
+using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
-public class ClassSelection : MonoBehaviour
+public class ClassSelectionAnimator : MonoBehaviour
 {
-    [SerializeField] private GameManager _gM;
+    [Header("Animation/Audio Settings")]
     [SerializeField] private Animator _anim;
     [SerializeField] private AudioSource _aS;
+    [SerializeField, Tooltip("Reference to the class selection controller.")]
+    private ClassSelectUI _classUI;
     [Tooltip("The ID of the class this button selects.")]
     [SerializeField, Range(0,2)] private uint _classID;
     private bool _selected;
+
     private void OnMouseEnter()
     {
         _anim.SetBool("hovered", true);
@@ -25,7 +33,7 @@ public class ClassSelection : MonoBehaviour
     private void OnMouseDown()
     {
         _selected = !_selected;
-        _gM.SelectClass(_classID);
+        _classUI?.Select((int)_classID);
         _aS.Play();
     }
 }

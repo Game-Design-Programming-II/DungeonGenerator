@@ -30,16 +30,16 @@ namespace MapGeneration
         [SerializeField] private TilemapCollider2D _wallCollider;
         [SerializeField, Tooltip("Optional composite collider used with the wall tilemap.")]
         private CompositeCollider2D _wallComposite;
-        
+
         [Header("Single-Sprite Tiles")]
         [SerializeField] private TileBase _floorTile;
         [SerializeField] private TileBase _wallTile;
         [SerializeField] private TileBase _endTile;
 
-        [Header("Prop content (placeholder until WFC implemented)")] 
+        [Header("Prop content (placeholder until WFC implemented)")]
         [SerializeField, Range(0f, 1f)] private float _propScatterDensity = 0.08f;
         [SerializeField] private List<WeightedProp> _propSet = new List<WeightedProp>();
-        
+
         [Header("Runtime Content Spawning")]
         [SerializeField] private Transform _runtimeContentParent;
         [SerializeField] private List<EnemySpawnConfig> _enemyTypes = new List<EnemySpawnConfig>();
@@ -51,7 +51,7 @@ namespace MapGeneration
         [SerializeField] private GameObject _spikeTrapPrefab;
         [SerializeField, Range(0f, 1f)] private float _spikeTrapDensity = 0.25f;
         [SerializeField] private GameObject _pressurePlatePrefab;
-        
+
         [Header("Test Variables, remove later")]
         [SerializeField] private TileBase _doorTile;
         [SerializeField] private TileBase _aStarTile;
@@ -67,10 +67,10 @@ namespace MapGeneration
         public bool HasPlayerSpawn => _hasPlayerSpawn;
         public Vector3 PlayerSpawnWorldPosition => _playerSpawnWorldPosition;
         public event Action<Vector3> PlayerSpawnPointUpdated;
-        
+
         // A*
         private Dictionary<Room, List<Vector2Int>> _roomDoors = new();
-        
+
         private List<Edge> _lastCorridors;
         private List<Room> _lastRooms;
 
@@ -79,7 +79,7 @@ namespace MapGeneration
         private List<Room> _gizmoRooms = new List<Room>();
         private List<Edge> _gizmoEdges = new List<Edge>();
         private List<Edge> _gizmoMST = new List<Edge>();
-        
+
         private enum RoomContentRole
         {
             Combat,
@@ -128,235 +128,6 @@ namespace MapGeneration
             Generate();
         }
 
-        // Paint decorative props onto the prop tilemap and reserve those tiles.
-        private void ScatterProps(RoomGrid grid, System.Random rng, HashSet<Vector2Int> blocked)
-        {
-            if (_propSet == null || _propSet.Count == 0 || _propScatterDensity <= 0f) return;
-
-            IRoomContentGenerator generator = new RandomScatterGenerator(_propScatterDensity);
-            List<Vector2Int> placements = generator.Generate(grid, rng);
-
-            foreach (Vector2Int cell in placements)
-            {
-                if (!grid.InBounds(cell.x, cell.y)) continue;
-                if (grid.Cells[cell.x, cell.y] != CellType.Floor) continue;
-
-                grid.Cells[cell.x, cell.y] = CellType.Prop;
-                blocked?.Add(cell);
-
-                Vector3Int world = grid.CellToWorld(cell.x, cell.y);
-                TileBase chosen = PickWeightedProp(rng);
-                if (chosen != null)
-                {
-                    _propMap.SetTile(world, chosen);
-                }
-            }
-        }
-
-        // Drop a single enemy type into the room using the configured count range.
-        private void SpawnEnemiesInRoom(RoomGrid grid, System.Random rng, HashSet<Vector2Int> blocked)
-        {
-            if (_enemyTypes == null || _enemyTypes.Count == 0) return;
-
-            EnemySpawnConfig config = _enemyTypes[rng.Next(_enemyTypes.Count)];
-            if (config == null || config.prefab == null)
-            {
-                Debug.LogWarning("[EnemySpawn] Missing enemy prefab configuration.");
-                return;
-            }
-
-            int spawnCount = SampleCount(config.countRange, _fallbackEnemyCount, rng);
-            if (spawnCount <= 0) return;
-
-            for (int i = 0; i < spawnCount; i++)
-            {
-                if (!TryGetRandomFloorCell(grid, rng, blocked, out Vector2Int cell))
-                {
-                    Debug.LogWarning("[EnemySpawn] Unable to find a free floor cell for enemy.");
-                    break;
-                }
-
-                SpawnPrefabAtCell(config.prefab, grid, cell);
-                blocked?.Add(cell);
-            }
-        }
-
-        // Distribute pick-up prefabs across floor tiles using a Bernoulli trial.
-        private void ScatterPickups(RoomGrid grid, System.Random rng, HashSet<Vector2Int> blocked)
-        {
-            if (_pickupPrefabs == null || _pickupPrefabs.Count == 0 || _pickupScatterDensity <= 0f) return;
-
-            int xMin = 1;
-            int xMax = grid.Width - 2;
-            int yMin = 1;
-            int yMax = grid.Height - 2;
-
-            for (int x = xMin; x <= xMax; x++)
-            {
-                for (int y = yMin; y <= yMax; y++)
-                {
-                    Vector2Int cell = new Vector2Int(x, y);
-                    if (!grid.InBounds(x, y)) continue;
-                    if (grid.Cells[x, y] != CellType.Floor) continue;
-                    if (blocked != null && blocked.Contains(cell)) continue;
-                    if (rng.NextDouble() > _pickupScatterDensity) continue;
-
-                    GameObject prefab = _pickupPrefabs[rng.Next(_pickupPrefabs.Count)];
-                    if (prefab == null) continue;
-
-                    SpawnPrefabAtCell(prefab, grid, cell);
-                    blocked?.Add(cell);
-                }
-            }
-        }
-
-        // Fill the room with spike hazards according to the configured density.
-        private void SpawnSpikeTraps(RoomGrid grid, System.Random rng, HashSet<Vector2Int> blocked)
-        {
-            if (_spikeTrapPrefab == null || _spikeTrapDensity <= 0f)
-            {
-                Debug.LogWarning("[SpikePuzzle] Spike trap prefab or density is missing.");
-                return;
-            }
-
-            int interiorWidth = Mathf.Max(0, grid.Width - 2);
-            int interiorHeight = Mathf.Max(0, grid.Height - 2);
-            int targetCount = Mathf.Max(1, Mathf.RoundToInt(interiorWidth * interiorHeight * _spikeTrapDensity));
-
-            for (int i = 0; i < targetCount; i++)
-            {
-                if (!TryGetRandomFloorCell(grid, rng, blocked, out Vector2Int cell))
-                {
-                    Debug.LogWarning("[SpikePuzzle] Unable to place all spike traps.");
-                    break;
-                }
-
-                grid.Cells[cell.x, cell.y] = CellType.Prop;
-                SpawnPrefabAtCell(_spikeTrapPrefab, grid, cell);
-                blocked?.Add(cell);
-            }
-        }
-
-        // Spawn one pressure plate per player (real or expected) in this room.
-        private void SpawnPressurePlates(RoomGrid grid, System.Random rng, HashSet<Vector2Int> blocked)
-        {
-            if (_pressurePlatePrefab == null)
-            {
-                Debug.LogWarning("[PressurePuzzle] Pressure plate prefab not assigned.");
-                return;
-            }
-
-            int plateCount = Mathf.Max(1, GetPlayerCountEstimate());
-
-            for (int i = 0; i < plateCount; i++)
-            {
-                if (!TryGetRandomFloorCell(grid, rng, blocked, out Vector2Int cell))
-                {
-                    Debug.LogWarning("[PressurePuzzle] Unable to place all pressure plates.");
-                    break;
-                }
-
-                grid.Cells[cell.x, cell.y] = CellType.Prop;
-                SpawnPrefabAtCell(_pressurePlatePrefab, grid, cell);
-                blocked?.Add(cell);
-            }
-        }
-
-        // Try to derive a live player count from the spawn controller, otherwise fallback.
-        private int GetPlayerCountEstimate()
-        {
-            // Prefer Photon player count for deterministic multiplayer behavior
-            if (PhotonNetwork.IsConnected && PhotonNetwork.CurrentRoom != null)
-            {
-                return Mathf.Max(1, PhotonNetwork.CurrentRoom.PlayerCount);
-            }
-
-            PlayerSpawnController spawner = FindAnyObjectByType<PlayerSpawnController>();
-            if (spawner != null && spawner.SpawnedPlayers.Count > 0)
-            {
-                return spawner.SpawnedPlayers.Count;
-            }
-
-            return Mathf.Max(1, _expectedPlayerCount);
-        }
-
-        private static int SampleFromUIntRange(UIntRange range, System.Random rng)
-        {
-            int min = (int)range.GetMinValue;
-            int max = (int)range.GetMaxValue;
-            if (max < min) { int tmp = min; min = max; max = tmp; }
-            return rng.Next(min, max + 1);
-        }
-
-        private static uint SampleFromUIntRangeUint(UIntRange range, System.Random rng)
-        {
-            int min = (int)range.GetMinValue;
-            int max = (int)range.GetMaxValue;
-            if (max < min) { int tmp = min; min = max; max = tmp; }
-            return (uint)rng.Next(min, max + 1);
-        }
-
-        // Sample an inclusive count from the supplied range, clamping to fallback when invalid.
-        private int SampleCount(Vector2Int range, Vector2Int fallback, System.Random rng)
-        {
-            int min = range.x;
-            int max = range.y;
-            if (max < min)
-            {
-                min = fallback.x;
-                max = fallback.y;
-            }
-
-            min = Mathf.Max(0, min);
-            max = Mathf.Max(min, max);
-
-            return rng.Next(min, max + 1);
-        }
-
-        // Grab a random floor tile inside the room that is not reserved by previous placements.
-        private bool TryGetRandomFloorCell(RoomGrid grid, System.Random rng, HashSet<Vector2Int> blocked, out Vector2Int result)
-        {
-            result = default;
-            int attempts = Mathf.Max(64, grid.Width * grid.Height);
-
-            for (int i = 0; i < attempts; i++)
-            {
-                int x = rng.Next(1, Mathf.Max(2, grid.Width - 1));
-                int y = rng.Next(1, Mathf.Max(2, grid.Height - 1));
-                Vector2Int candidate = new Vector2Int(x, y);
-
-                if (!grid.InBounds(x, y)) continue;
-                if (grid.Cells[x, y] != CellType.Floor) continue;
-                if (blocked != null && blocked.Contains(candidate)) continue;
-
-                result = candidate;
-                return true;
-            }
-
-            return false;
-        }
-
-        // Instantiate a prefab at the centre of the requested room cell.
-        private void SpawnPrefabAtCell(GameObject prefab, RoomGrid grid, Vector2Int cell)
-        {
-            if (prefab == null) return;
-
-            Vector3 worldPos = GetCellCenterWorld(grid, cell);
-            Transform parent = _runtimeContentParent != null ? _runtimeContentParent : transform;
-            Instantiate(prefab, worldPos, Quaternion.identity, parent);
-        }
-
-        private Vector3 GetCellCenterWorld(RoomGrid grid, Vector2Int cell)
-        {
-            Vector3Int worldCell = grid.CellToWorld(cell.x, cell.y);
-            if (_floorMap != null)
-            {
-                return _floorMap.GetCellCenterWorld(worldCell);
-            }
-
-            return new Vector3(worldCell.x + 0.5f, worldCell.y + 0.5f, 0f);
-        }
-
         public void Generate()
         {
             if (_rng == null)
@@ -373,7 +144,7 @@ namespace MapGeneration
 
             ClearPlayerSpawnPoint();
             RefreshWallColliders();
-            
+
             List<Room> rooms = new List<Room>();
 
             int numRooms = SampleFromUIntRange(_numberOfRooms, _rng);
@@ -387,6 +158,41 @@ namespace MapGeneration
             _gizmoRooms = rooms;
 
             StartCoroutine(SeparateRooms(rooms));
+        }
+
+        private void ClearPlayerSpawnPoint()
+        {
+            _hasPlayerSpawn = false;
+            _playerSpawnWorldPosition = Vector3.zero;
+        }
+
+        private void RefreshWallColliders()
+        {
+            if (_wallCollider != null)
+            {
+                _wallCollider.ProcessTilemapChanges();
+            }
+
+            if (_wallComposite != null)
+            {
+                _wallComposite.GenerateGeometry();
+            }
+        }
+
+        private static int SampleFromUIntRange(UIntRange range, System.Random rng)
+        {
+            int min = (int)range.GetMinValue;
+            int max = (int)range.GetMaxValue;
+            if (max < min) { int tmp = min; min = max; max = tmp; }
+            return rng.Next(min, max + 1);
+        }
+
+        private static uint SampleFromUIntRangeUint(UIntRange range, System.Random rng)
+        {
+            int min = (int)range.GetMinValue;
+            int max = (int)range.GetMaxValue;
+            if (max < min) { int tmp = min; min = max; max = tmp; }
+            return (uint)rng.Next(min, max + 1);
         }
 
         private IEnumerator SeparateRooms(List<Room> rooms)
@@ -528,15 +334,74 @@ namespace MapGeneration
             List<Edge> corridors = CalculateCorridors(mst, rooms);
             BuildRoomGrids(rooms);
             _lastRooms = new List<Room>(rooms);
-            _lastCorridors =  corridors;
+            _lastCorridors = corridors;
             StartCoroutine(DrawContent(rooms, corridors));
             _gizmoMST = mst;
+        }
+
+        private void AddRandomEdges(List<Edge> edges, List<Edge> mst)
+        {
+            for (int i = 0; i < edges.Count; i++)
+            {
+                double r = _rng.NextDouble();
+
+                if (r < _edgeReconnectionPercent)
+                {
+                    mst.Add(edges[i]);
+                }
+            }
+        }
+
+        private List<Edge> CalculateCorridors(List<Edge> mst, List<Room> rooms)
+        {
+            List<Edge> corridors = new List<Edge>();
+
+            for (int i = 0; i < mst.Count; i++)
+            {
+                Vector2 A = mst[i].GetPointA;
+                Vector2 B = mst[i].GetPointB;
+
+                Vector2 midPoint = new Vector2(A.x, B.y);
+
+                // Avoid adding zero-length segments in straight-line cases
+                if (midPoint != A)
+                {
+                    corridors.Add(new Edge(A, midPoint));
+                }
+                if (midPoint != B)
+                {
+                    corridors.Add(new Edge(midPoint, B));
+                }
+            }
+
+            return corridors;
+        }
+
+        private void BuildRoomGrids(List<Room> rooms)
+        {
+            _roomGrids.Clear(); // remove old room grids
+
+            // // TODO: remove debug
+            // int roomsIterated_Grid = 0;
+            // int roomsActive_Grid = 0;
+
+            foreach (Room r in rooms)
+            {
+                // roomsIterated_Grid++;
+                if (r.TurnedOff) continue; // only use active rooms
+
+                // roomsActive_Grid++;
+                RoomGrid grid = new RoomGrid(r);
+                _roomGrids[r] = grid;
+            }
+
+            // Debug.Log($"[BuildRoomdGrids] Rooms iterated: {roomsIterated_Grid},  active grids: {roomsActive_Grid}");
         }
 
         private IEnumerator DrawContent(List<Room> rooms, List<Edge> corridors)
         {
             int iteration = 0;
-            
+
             // room count TODO: remove debug stuff
             int roomsIterated_Draw = rooms.Count;
             int roomsActive_Draw = 0;
@@ -576,7 +441,7 @@ namespace MapGeneration
                     }
                 }
             }
-            
+
             Debug.Log($"[DrawContent] Rooms iterated: {roomsIterated_Draw}, active drawn: {roomsActive_Draw}");
 
             /* Draw corridors with clean floormap/wallmap split:
@@ -588,7 +453,7 @@ namespace MapGeneration
             {
                 Edge curEdge = corridors[i];
                 PaintCorridorSegment(curEdge.GetPointA, curEdge.GetPointB);
-                
+
                 iteration++;
 
                 if (iteration >= _refreshCounterMax)
@@ -601,68 +466,6 @@ namespace MapGeneration
             GenerateRoomContent();
             EnsureRoomConnectivityAStar(); // guarantee paths and clear blocking
             RefreshWallColliders();
-        }
-
-        // Paint a 1-tile wide corridor floor from A to B on _floorMap,
-        // clear any walls along the path on _wallMap, and add adjacent walls on _wallMap
-        // without overwriting existing floors (prevents walls inside rooms).
-        private void PaintCorridorSegment(Vector2 A, Vector2 B)
-        {
-            if (_floorMap == null) return;
-
-            foreach (Vector3Int tilePos in EnumerateLineTiles(A, B))
-            {
-                // Clear walls along the path to avoid wall-over-floor
-                if (_wallMap != null)
-                {
-                    _wallMap.SetTile(tilePos, null);
-                }
-
-                // Lay floor
-                if (_floorTile != null)
-                {
-                    _floorMap.SetTile(tilePos, _floorTile);
-                }
-
-                // Add simple wall border on 4-neighbors where there is no floor
-                if (_wallMap != null && _wallTile != null)
-                {
-                    TryPlaceWall(tilePos + Vector3Int.up);
-                    TryPlaceWall(tilePos + Vector3Int.down);
-                    TryPlaceWall(tilePos + Vector3Int.left);
-                    TryPlaceWall(tilePos + Vector3Int.right);
-                }
-            }
-
-            void TryPlaceWall(Vector3Int pos)
-            {
-                // never place a wall where a floor already exists (room/corridor)
-                if (_floorMap.GetTile(pos) != null) return;
-                if (_wallMap.GetTile(pos) == null)
-                {
-                    _wallMap.SetTile(pos, _wallTile);
-                }
-            }
-        }
-
-        // Enumerate integer tile positions along a straight line between two points.
-        // Matches the stepping behavior used in MapVisualController.RectFill for line drawing.
-        private IEnumerable<Vector3Int> EnumerateLineTiles(Vector2 from, Vector2 to)
-        {
-            Vector3Int cur = new Vector3Int(Mathf.RoundToInt(from.x), Mathf.RoundToInt(from.y), 0);
-            Vector3Int end = new Vector3Int(Mathf.RoundToInt(to.x), Mathf.RoundToInt(to.y), 0);
-
-            yield return cur;
-            while (cur != end)
-            {
-                if (cur.x < end.x) cur.x++;
-                else if (cur.x > end.x) cur.x--;
-
-                if (cur.y < end.y) cur.y++;
-                else if (cur.y > end.y) cur.y--;
-
-                yield return cur;
-            }
         }
 
         private void GenerateRoomContent()
@@ -724,43 +527,6 @@ namespace MapGeneration
             if (_startRoom != null && _endRoom != null)
             {
                 Debug.Log($"[Content] Start at world {_startWorld} in room centered {_startRoom.Position}, End at world {_endWorld} in room centered {_endRoom.Position}");
-            }
-        }
-
-        private void ClearPlayerSpawnPoint()
-        {
-            _hasPlayerSpawn = false;
-            _playerSpawnWorldPosition = Vector3.zero;
-        }
-
-        private void UpdatePlayerSpawnPoint(Vector3Int cellPosition)
-        {
-            Vector3 worldPosition;
-
-            if (_floorMap != null)
-            {
-                worldPosition = _floorMap.GetCellCenterWorld(cellPosition);
-            }
-            else
-            {
-                worldPosition = new Vector3(cellPosition.x + 0.5f, cellPosition.y + 0.5f, cellPosition.z);
-            }
-
-            _playerSpawnWorldPosition = worldPosition;
-            _hasPlayerSpawn = true;
-            PlayerSpawnPointUpdated?.Invoke(_playerSpawnWorldPosition);
-        }
-
-        private void RefreshWallColliders()
-        {
-            if (_wallCollider != null)
-            {
-                _wallCollider.ProcessTilemapChanges();
-            }
-
-            if (_wallComposite != null)
-            {
-                _wallComposite.GenerateGeometry();
             }
         }
 
@@ -848,6 +614,24 @@ namespace MapGeneration
             ScatterPickups(grid, rng, blocked);
         }
 
+        private void UpdatePlayerSpawnPoint(Vector3Int cellPosition)
+        {
+            Vector3 worldPosition;
+
+            if (_floorMap != null)
+            {
+                worldPosition = _floorMap.GetCellCenterWorld(cellPosition);
+            }
+            else
+            {
+                worldPosition = new Vector3(cellPosition.x + 0.5f, cellPosition.y + 0.5f, cellPosition.z);
+            }
+
+            _playerSpawnWorldPosition = worldPosition;
+            _hasPlayerSpawn = true;
+            PlayerSpawnPointUpdated?.Invoke(_playerSpawnWorldPosition);
+        }
+
         // Place the dungeon exit marker and optional pickups.
         private void GenerateEndRoom(RoomAssignment assignment, System.Random rng)
         {
@@ -871,6 +655,79 @@ namespace MapGeneration
             ScatterPickups(grid, rng, blocked);
         }
 
+        // Puzzle room filled with spike traps; behaves differently from combat rooms.
+        private void GenerateSpikeTrapRoom(RoomAssignment assignment, System.Random rng)
+        {
+            RoomGrid grid = assignment.grid;
+            HashSet<Vector2Int> blocked = new HashSet<Vector2Int>();
+
+            SpawnSpikeTraps(grid, rng, blocked);
+            ScatterPickups(grid, rng, blocked);
+        }
+
+        // Fill the room with spike hazards according to the configured density.
+        private void SpawnSpikeTraps(RoomGrid grid, System.Random rng, HashSet<Vector2Int> blocked)
+        {
+            if (_spikeTrapPrefab == null || _spikeTrapDensity <= 0f)
+            {
+                Debug.LogWarning("[SpikePuzzle] Spike trap prefab or density is missing.");
+                return;
+            }
+
+            int interiorWidth = Mathf.Max(0, grid.Width - 2);
+            int interiorHeight = Mathf.Max(0, grid.Height - 2);
+            int targetCount = Mathf.Max(1, Mathf.RoundToInt(interiorWidth * interiorHeight * _spikeTrapDensity));
+
+            for (int i = 0; i < targetCount; i++)
+            {
+                if (!TryGetRandomFloorCell(grid, rng, blocked, out Vector2Int cell))
+                {
+                    Debug.LogWarning("[SpikePuzzle] Unable to place all spike traps.");
+                    break;
+                }
+
+                grid.Cells[cell.x, cell.y] = CellType.Prop;
+                SpawnPrefabAtCell(_spikeTrapPrefab, grid, cell);
+                blocked?.Add(cell);
+            }
+        }
+
+        // Puzzle room that spawns a pressure plate per player.
+        private void GeneratePressurePlateRoom(RoomAssignment assignment, System.Random rng)
+        {
+            Debug.Log("[GeneratePressurePlateRoom] Generating room...");
+            RoomGrid grid = assignment.grid;
+            HashSet<Vector2Int> blocked = new HashSet<Vector2Int>();
+
+            SpawnPressurePlates(grid, rng, blocked);
+            ScatterPickups(grid, rng, blocked);
+        }
+
+        // Spawn one pressure plate per player (real or expected) in this room.
+        private void SpawnPressurePlates(RoomGrid grid, System.Random rng, HashSet<Vector2Int> blocked)
+        {
+            if (_pressurePlatePrefab == null)
+            {
+                Debug.LogWarning("[PressurePuzzle] Pressure plate prefab not assigned.");
+                return;
+            }
+
+            int plateCount = Mathf.Max(1, GetPlayerCountEstimate());
+
+            for (int i = 0; i < plateCount; i++)
+            {
+                if (!TryGetRandomFloorCell(grid, rng, blocked, out Vector2Int cell))
+                {
+                    Debug.LogWarning("[PressurePuzzle] Unable to place all pressure plates.");
+                    break;
+                }
+
+                grid.Cells[cell.x, cell.y] = CellType.Prop;
+                SpawnPrefabAtCell(_pressurePlatePrefab, grid, cell);
+                blocked?.Add(cell);
+            }
+        }
+
         // Default room: props, one enemy type, and a sprinkle of pickups.
         private void GenerateCombatRoom(RoomAssignment assignment, System.Random rng)
         {
@@ -882,85 +739,316 @@ namespace MapGeneration
             ScatterPickups(grid, rng, blocked);
         }
 
-        // Puzzle room filled with spike traps; behaves differently from combat rooms.
-        private void GenerateSpikeTrapRoom(RoomAssignment assignment, System.Random rng)
+        // Paint decorative props onto the prop tilemap and reserve those tiles.
+        private void ScatterProps(RoomGrid grid, System.Random rng, HashSet<Vector2Int> blocked)
         {
-            RoomGrid grid = assignment.grid;
-            HashSet<Vector2Int> blocked = new HashSet<Vector2Int>();
+            if (_propSet == null || _propSet.Count == 0 || _propScatterDensity <= 0f) return;
 
-            SpawnSpikeTraps(grid, rng, blocked);
-            ScatterPickups(grid, rng, blocked);
-        }
+            IRoomContentGenerator generator = new RandomScatterGenerator(_propScatterDensity);
+            List<Vector2Int> placements = generator.Generate(grid, rng);
 
-        // Puzzle room that spawns a pressure plate per player.
-        private void GeneratePressurePlateRoom(RoomAssignment assignment, System.Random rng)
-        {
-            Debug.Log("[GeneratePressurePlateRoom] Generating room...");
-            RoomGrid grid = assignment.grid;
-            HashSet<Vector2Int> blocked = new HashSet<Vector2Int>();
-            
-            SpawnPressurePlates(grid, rng, blocked);
-            ScatterPickups(grid, rng, blocked);
-        }
-
-
-        private void AddRandomEdges(List<Edge> edges, List<Edge> mst)
-        {
-            for (int i = 0; i < edges.Count; i++)
+            foreach (Vector2Int cell in placements)
             {
-                double r = _rng.NextDouble();
+                if (!grid.InBounds(cell.x, cell.y)) continue;
+                if (grid.Cells[cell.x, cell.y] != CellType.Floor) continue;
 
-                if (r < _edgeReconnectionPercent)
+                grid.Cells[cell.x, cell.y] = CellType.Prop;
+                blocked?.Add(cell);
+
+                Vector3Int world = grid.CellToWorld(cell.x, cell.y);
+                TileBase chosen = PickWeightedProp(rng);
+                if (chosen != null)
                 {
-                    mst.Add(edges[i]);
+                    _propMap.SetTile(world, chosen);
                 }
             }
         }
 
-        private List<Edge> CalculateCorridors(List<Edge> mst, List<Room> rooms)
+        // Drop a single enemy type into the room using the configured count range.
+        private void SpawnEnemiesInRoom(RoomGrid grid, System.Random rng, HashSet<Vector2Int> blocked)
         {
-            List<Edge> corridors = new List<Edge>();
+            if (_enemyTypes == null || _enemyTypes.Count == 0) return;
 
-            for (int i = 0; i < mst.Count; i++)
+            EnemySpawnConfig config = _enemyTypes[rng.Next(_enemyTypes.Count)];
+            if (config == null || config.prefab == null)
             {
-                Vector2 A = mst[i].GetPointA;
-                Vector2 B = mst[i].GetPointB;
-
-                Vector2 midPoint = new Vector2(A.x, B.y);
-
-                // Avoid adding zero-length segments in straight-line cases
-                if (midPoint != A)
-                {
-                    corridors.Add(new Edge(A, midPoint));
-                }
-                if (midPoint != B)
-                {
-                    corridors.Add(new Edge(midPoint, B));
-                }
+                Debug.LogWarning("[EnemySpawn] Missing enemy prefab configuration.");
+                return;
             }
 
-            return corridors;
+            int spawnCount = SampleCount(config.countRange, _fallbackEnemyCount, rng);
+            if (spawnCount <= 0) return;
+
+            for (int i = 0; i < spawnCount; i++)
+            {
+                if (!TryGetRandomFloorCell(grid, rng, blocked, out Vector2Int cell))
+                {
+                    Debug.LogWarning("[EnemySpawn] Unable to find a free floor cell for enemy.");
+                    break;
+                }
+
+                SpawnPrefabAtCell(config.prefab, grid, cell);
+                blocked?.Add(cell);
+            }
         }
 
-        private void BuildRoomGrids(List<Room> rooms)
+        // Distribute pick-up prefabs across floor tiles using a Bernoulli trial.
+        private void ScatterPickups(RoomGrid grid, System.Random rng, HashSet<Vector2Int> blocked)
         {
-            _roomGrids.Clear(); // remove old room grids
+            if (_pickupPrefabs == null || _pickupPrefabs.Count == 0 || _pickupScatterDensity <= 0f) return;
 
-            // // TODO: remove debug
-            // int roomsIterated_Grid = 0;
-            // int roomsActive_Grid = 0;
+            int xMin = 1;
+            int xMax = grid.Width - 2;
+            int yMin = 1;
+            int yMax = grid.Height - 2;
 
-            foreach (Room r in rooms)
+            for (int x = xMin; x <= xMax; x++)
             {
-                // roomsIterated_Grid++;
-                if (r.TurnedOff) continue; // only use active rooms
-                
-                // roomsActive_Grid++;
-                RoomGrid grid = new RoomGrid(r);
-                _roomGrids[r] = grid;
+                for (int y = yMin; y <= yMax; y++)
+                {
+                    Vector2Int cell = new Vector2Int(x, y);
+                    if (!grid.InBounds(x, y)) continue;
+                    if (grid.Cells[x, y] != CellType.Floor) continue;
+                    if (blocked != null && blocked.Contains(cell)) continue;
+                    if (rng.NextDouble() > _pickupScatterDensity) continue;
+
+                    GameObject prefab = _pickupPrefabs[rng.Next(_pickupPrefabs.Count)];
+                    if (prefab == null) continue;
+
+                    SpawnPrefabAtCell(prefab, grid, cell);
+                    blocked?.Add(cell);
+                }
             }
-            
-            // Debug.Log($"[BuildRoomdGrids] Rooms iterated: {roomsIterated_Grid},  active grids: {roomsActive_Grid}");
+        }
+
+        private void EnsureRoomConnectivityAStar()
+        {
+            if (_lastRooms == null || _lastCorridors == null) return;
+
+            // Build door list for each active room (one doorway per corridor segment touching it)
+            _roomDoors.Clear();
+
+            // TODO: remove debug variables
+            int roomsIterated_Astar = 0;
+            int roomsActive_Astar = 0;
+
+            foreach (Room r in _lastRooms)
+            {
+                roomsIterated_Astar++;
+                if (!r.TurnedOff)
+                {
+                    roomsActive_Astar++;
+                    _roomDoors[r] = new List<Vector2Int>();
+                }
+            }
+
+            // quick lookup: world position -> room
+            Dictionary<Vector2, Room> roomAt = new Dictionary<Vector2, Room>();
+            foreach (Room r in _lastRooms)
+                if (!r.TurnedOff) roomAt[r.Position] = r;
+
+            // for each corridor segment, attach the endpoint that equals a room Center
+            foreach (Edge seg in _lastCorridors)
+            {
+                // If a corridor segment starts at a room center, carve a doorway there.
+                if (roomAt.TryGetValue(seg.GetPointA, out Room roomA) && _roomGrids.TryGetValue(roomA, out RoomGrid gridA))
+                {
+                    Vector2 dir = seg.GetPointB - seg.GetPointA; // toward midpoint
+                    Vector2Int door = CarveDoorOnBorder(gridA, roomA, dir);
+                    _roomDoors[roomA].Add(door);
+                    PaintDoorDebug(gridA, door.x, door.y);
+                }
+                // Likewise if it ends at a room center
+                if (roomAt.TryGetValue(seg.GetPointB, out Room roomB) && _roomGrids.TryGetValue(roomB, out RoomGrid gridB))
+                {
+                    Vector2 dir = seg.GetPointA - seg.GetPointB; // toward midpoint
+                    Vector2Int door = CarveDoorOnBorder(gridB, roomB, dir);
+                    _roomDoors[roomB].Add(door);
+                    PaintDoorDebug(gridB, door.x, door.y);
+                }
+            }
+
+            // TODO: REMOVE debug stuff
+            int roomsWithDoors = 0;
+            foreach (KeyValuePair<Room, List<Vector2Int>> kv in _roomDoors)
+                if (kv.Value != null && kv.Value.Count > 0)
+                    roomsWithDoors++;
+            Debug.Log($"[A*] Rooms iterated: {roomsIterated_Astar}, active:  {roomsActive_Astar}, with doors:  {roomsWithDoors}");
+
+            // For each room, A* between every pair of its door tiles and then clear props in the way
+            foreach (KeyValuePair<Room, List<Vector2Int>> kv in _roomDoors)
+            {
+                Room room = kv.Key;
+                RoomGrid grid = _roomGrids[room];
+                List<Vector2Int> doors = kv.Value;
+
+                for (int i = 0; i < doors.Count; i++)
+                    for (int j = i + 1; j < doors.Count; j++)
+                    {
+                        Vector2Int start = doors[i];
+                        Vector2Int goal = doors[j];
+
+                        List<Vector2Int> path = AStarPathfinder.FindPath(grid, start, goal);
+                        if (path == null) continue;
+
+                        // TODO: DEBUG: paint the A* path
+                        PaintPathDebug(grid, path);
+
+                        // Clear any props along the chosen path
+                        foreach (Vector2Int p in path)
+                        {
+                            if (!grid.InBounds(p.x, p.y)) continue;
+
+                            if (grid.Cells[p.x, p.y] == CellType.Prop)
+                            {
+                                grid.Cells[p.x, p.y] = CellType.Floor;
+                                Vector3Int w = grid.CellToWorld(p.x, p.y);
+                                _propMap.SetTile(w, null); // remove prop tile on the visual layer
+                            }
+                        }
+                    }
+            }
+        }
+
+        // Paint a 1-tile wide corridor floor from A to B on _floorMap,
+        // clear any walls along the path on _wallMap, and add adjacent walls on _wallMap
+        // without overwriting existing floors (prevents walls inside rooms).
+        private void PaintCorridorSegment(Vector2 A, Vector2 B)
+        {
+            if (_floorMap == null) return;
+
+            foreach (Vector3Int tilePos in EnumerateLineTiles(A, B))
+            {
+                // Clear walls along the path to avoid wall-over-floor
+                if (_wallMap != null)
+                {
+                    _wallMap.SetTile(tilePos, null);
+                }
+
+                // Lay floor
+                if (_floorTile != null)
+                {
+                    _floorMap.SetTile(tilePos, _floorTile);
+                }
+
+                // Add simple wall border on 4-neighbors where there is no floor
+                if (_wallMap != null && _wallTile != null)
+                {
+                    TryPlaceWall(tilePos + Vector3Int.up);
+                    TryPlaceWall(tilePos + Vector3Int.down);
+                    TryPlaceWall(tilePos + Vector3Int.left);
+                    TryPlaceWall(tilePos + Vector3Int.right);
+                }
+            }
+
+            void TryPlaceWall(Vector3Int pos)
+            {
+                // never place a wall where a floor already exists (room/corridor)
+                if (_floorMap.GetTile(pos) != null) return;
+                if (_wallMap.GetTile(pos) == null)
+                {
+                    _wallMap.SetTile(pos, _wallTile);
+                }
+            }
+        }
+
+        // Try to derive a live player count from the spawn controller, otherwise fallback.
+        private int GetPlayerCountEstimate()
+        {
+            // Prefer Photon player count for deterministic multiplayer behavior
+            if (PhotonNetwork.IsConnected && PhotonNetwork.CurrentRoom != null)
+            {
+                return Mathf.Max(1, PhotonNetwork.CurrentRoom.PlayerCount);
+            }
+
+            PlayerSpawnController spawner = FindAnyObjectByType<PlayerSpawnController>();
+            if (spawner != null && spawner.SpawnedPlayers.Count > 0)
+            {
+                return spawner.SpawnedPlayers.Count;
+            }
+
+            return Mathf.Max(1, _expectedPlayerCount);
+        }
+
+        // Sample an inclusive count from the supplied range, clamping to fallback when invalid.
+        private int SampleCount(Vector2Int range, Vector2Int fallback, System.Random rng)
+        {
+            int min = range.x;
+            int max = range.y;
+            if (max < min)
+            {
+                min = fallback.x;
+                max = fallback.y;
+            }
+
+            min = Mathf.Max(0, min);
+            max = Mathf.Max(min, max);
+
+            return rng.Next(min, max + 1);
+        }
+
+        // Grab a random floor tile inside the room that is not reserved by previous placements.
+        private bool TryGetRandomFloorCell(RoomGrid grid, System.Random rng, HashSet<Vector2Int> blocked, out Vector2Int result)
+        {
+            result = default;
+            int attempts = Mathf.Max(64, grid.Width * grid.Height);
+
+            for (int i = 0; i < attempts; i++)
+            {
+                int x = rng.Next(1, Mathf.Max(2, grid.Width - 1));
+                int y = rng.Next(1, Mathf.Max(2, grid.Height - 1));
+                Vector2Int candidate = new Vector2Int(x, y);
+
+                if (!grid.InBounds(x, y)) continue;
+                if (grid.Cells[x, y] != CellType.Floor) continue;
+                if (blocked != null && blocked.Contains(candidate)) continue;
+
+                result = candidate;
+                return true;
+            }
+
+            return false;
+        }
+
+        // Instantiate a prefab at the centre of the requested room cell.
+        private void SpawnPrefabAtCell(GameObject prefab, RoomGrid grid, Vector2Int cell)
+        {
+            if (prefab == null) return;
+
+            Vector3 worldPos = GetCellCenterWorld(grid, cell);
+            Transform parent = _runtimeContentParent != null ? _runtimeContentParent : transform;
+            Instantiate(prefab, worldPos, Quaternion.identity, parent);
+        }
+
+        private Vector3 GetCellCenterWorld(RoomGrid grid, Vector2Int cell)
+        {
+            Vector3Int worldCell = grid.CellToWorld(cell.x, cell.y);
+            if (_floorMap != null)
+            {
+                return _floorMap.GetCellCenterWorld(worldCell);
+            }
+
+            return new Vector3(worldCell.x + 0.5f, worldCell.y + 0.5f, 0f);
+        }
+
+        // Enumerate integer tile positions along a straight line between two points.
+        // Matches the stepping behavior used in MapVisualController.RectFill for line drawing.
+        private IEnumerable<Vector3Int> EnumerateLineTiles(Vector2 from, Vector2 to)
+        {
+            Vector3Int cur = new Vector3Int(Mathf.RoundToInt(from.x), Mathf.RoundToInt(from.y), 0);
+            Vector3Int end = new Vector3Int(Mathf.RoundToInt(to.x), Mathf.RoundToInt(to.y), 0);
+
+            yield return cur;
+            while (cur != end)
+            {
+                if (cur.x < end.x) cur.x++;
+                else if (cur.x > end.x) cur.x--;
+
+                if (cur.y < end.y) cur.y++;
+                else if (cur.y > end.y) cur.y--;
+
+                yield return cur;
+            }
         }
 
         private int SortBySize(Room A, Room B)
@@ -1024,95 +1112,6 @@ namespace MapGeneration
 
             return extents;
         }
-        
-        private void EnsureRoomConnectivityAStar()
-        {
-            if (_lastRooms == null || _lastCorridors == null) return;
-
-            // Build door list for each active room (one doorway per corridor segment touching it)
-            _roomDoors.Clear();
-            
-            // TODO: remove debug variables
-            int roomsIterated_Astar = 0;
-            int roomsActive_Astar = 0;
-            
-            foreach (Room r in _lastRooms)
-            {
-                roomsIterated_Astar++;
-                if (!r.TurnedOff)
-                {
-                    roomsActive_Astar++;
-                    _roomDoors[r] = new List<Vector2Int>();
-                }
-            }
-
-            // quick lookup: world position -> room
-            Dictionary<Vector2, Room> roomAt = new Dictionary<Vector2, Room>();
-            foreach (Room r in _lastRooms) 
-                if (!r.TurnedOff) roomAt[r.Position] = r;
-
-            // for each corridor segment, attach the endpoint that equals a room Center
-            foreach (Edge seg in _lastCorridors)
-            {
-                // If a corridor segment starts at a room center, carve a doorway there.
-                if (roomAt.TryGetValue(seg.GetPointA, out Room roomA) && _roomGrids.TryGetValue(roomA, out RoomGrid gridA))
-                {
-                    Vector2 dir = seg.GetPointB - seg.GetPointA; // toward midpoint
-                    Vector2Int door = CarveDoorOnBorder(gridA, roomA, dir);
-                    _roomDoors[roomA].Add(door);
-                    PaintDoorDebug(gridA, door.x, door.y);
-                }
-                // Likewise if it ends at a room center
-                if (roomAt.TryGetValue(seg.GetPointB, out Room roomB) && _roomGrids.TryGetValue(roomB, out RoomGrid gridB))
-                {
-                    Vector2 dir = seg.GetPointA - seg.GetPointB; // toward midpoint
-                    Vector2Int door = CarveDoorOnBorder(gridB, roomB, dir);
-                    _roomDoors[roomB].Add(door);
-                    PaintDoorDebug(gridB, door.x, door.y);
-                }
-            }
-            
-            // TODO: REMOVE debug stuff
-            int roomsWithDoors = 0;
-            foreach (KeyValuePair<Room, List<Vector2Int>> kv in _roomDoors)
-                if (kv.Value != null && kv.Value.Count > 0)
-                    roomsWithDoors++;
-            Debug.Log($"[A*] Rooms iterated: {roomsIterated_Astar}, active:  {roomsActive_Astar}, with doors:  {roomsWithDoors}");
-
-            // For each room, A* between every pair of its door tiles and then clear props in the way
-            foreach (KeyValuePair<Room, List<Vector2Int>> kv in _roomDoors)
-            {
-                Room room = kv.Key;
-                RoomGrid grid = _roomGrids[room];
-                List<Vector2Int> doors = kv.Value;
-
-                for (int i = 0; i < doors.Count; i++)
-                for (int j = i + 1; j < doors.Count; j++)
-                {
-                    Vector2Int start = doors[i];
-                    Vector2Int goal  = doors[j];
-
-                    List<Vector2Int> path = AStarPathfinder.FindPath(grid, start, goal);
-                    if (path == null) continue;
-
-                    // TODO: DEBUG: paint the A* path
-                    PaintPathDebug(grid, path);
-                    
-                    // Clear any props along the chosen path
-                    foreach (Vector2Int p in path)
-                    {
-                        if (!grid.InBounds(p.x, p.y)) continue;
-
-                        if (grid.Cells[p.x, p.y] == CellType.Prop)
-                        {
-                            grid.Cells[p.x, p.y] = CellType.Floor;
-                            Vector3Int w = grid.CellToWorld(p.x, p.y);
-                            _propMap.SetTile(w, null); // remove prop tile on the visual layer
-                        }
-                    }
-                }
-            }
-        }
 
         // Chooses which border to carve based on corridor direction.
         // Returns the interior cell (one tile inside the room) that we treat as the door node for A*.
@@ -1168,12 +1167,10 @@ namespace MapGeneration
                     grid.Cells[doorInterior.x, doorInterior.y] = CellType.Floor;
                     PaintDoorDebug(grid, doorInterior.x, doorInterior.y);
                 }
-                
+
                 return doorInterior;
             }
         }
-
-        
 
         private Vector2Int PickRandomInteriorFloor(RoomGrid g, System.Random rng, int maxTries = 64)
         {
@@ -1181,7 +1178,7 @@ namespace MapGeneration
 
             for (int t = 0; t < maxTries; t++)
             {
-                int gx = rng.Next(1, g.Width  - 1); // interior (excludes wall ring)
+                int gx = rng.Next(1, g.Width - 1); // interior (excludes wall ring)
                 int gy = rng.Next(1, g.Height - 1);
                 if (g.Cells[gx, gy] == CellType.Floor)
                     return new Vector2Int(gx, gy);
@@ -1189,16 +1186,15 @@ namespace MapGeneration
 
             // Fallback: first interior floor we can find
             for (int gx = 1; gx < g.Width - 1; gx++)
-            for (int gy = 1; gy < g.Height - 1; gy++)
-                if (g.Cells[gx, gy] == CellType.Floor)
-                    return new Vector2Int(gx, gy);
+                for (int gy = 1; gy < g.Height - 1; gy++)
+                    if (g.Cells[gx, gy] == CellType.Floor)
+                        return new Vector2Int(gx, gy);
 
             return new Vector2Int(0, 0); // degenerate
         }
 
-        
         // Node type moved to AStarPathfinder
-        
+
         private TileBase PickWeightedProp(System.Random rng)
         {
             if (_propSet == null || _propSet.Count == 0) return null;
@@ -1225,7 +1221,6 @@ namespace MapGeneration
             }
             return null;
         }
-
 
         private void OnDrawGizmos()
         {
@@ -1267,7 +1262,7 @@ namespace MapGeneration
                 }
             }
         }
-        
+
         private void PaintDoorDebug(RoomGrid grid, int gx, int gy)
         {
             if (_debugMap == null || _doorTile == null) return;
@@ -1321,7 +1316,7 @@ namespace MapGeneration
             _turnedOff = false;
         }
     }
-    
+
     public enum CellType { Empty, Floor, Wall, Prop, SpecialStart, SpecialEnd }
 
     public class RoomGrid
@@ -1345,34 +1340,34 @@ namespace MapGeneration
                 (int)r.Position.x - r.GetWidth,
                 (int)r.Position.y - r.GetHeight
             );
-            
-            Cells = new  CellType[Width, Height];
-            
+
+            Cells = new CellType[Width, Height];
+
             // set floor tiles
             for (int gx = 0; gx < Width; gx++)
                 for (int gy = 0; gy < Height; gy++)
                     Cells[gx, gy] = CellType.Floor;
-            
+
             // set wall tiles
             for (int gx = 0; gx < Width; gx++)
             {
                 Cells[gx, 0] = CellType.Wall;
-                Cells[gx, Height-1] = CellType.Wall;
+                Cells[gx, Height - 1] = CellType.Wall;
             }
 
             for (int gy = 0; gy < Height; gy++)
             {
                 Cells[0, gy] = CellType.Wall;
-                Cells[Width-1, gy] = CellType.Wall;
+                Cells[Width - 1, gy] = CellType.Wall;
             }
         }
-        
+
         public bool InBounds(int gx, int gy) =>
             gx >= 0 && gy >= 0 && gx < Width && gy < Height;
-        
+
         public Vector3Int CellToWorld(int gx, int gy) =>
             new Vector3Int(Origin.x + gx, Origin.y + gy, 0);
-        
+
         public Vector2Int WorldToCell(Vector3Int world) =>
             new Vector2Int(world.x - Origin.x, world.y - Origin.y);
     }
@@ -1400,7 +1395,7 @@ namespace MapGeneration
         // Return a list of local grid positions to occupy with props
         List<Vector2Int> Generate(RoomGrid grid, System.Random rng);
     }
-    
+
     // TODO: TEMP: very simple scatter routine to prove the pipe works.
     public class RandomScatterGenerator : IRoomContentGenerator
     {
@@ -1416,17 +1411,17 @@ namespace MapGeneration
             List<Vector2Int> results = new List<Vector2Int>();
             // if we allow for rooms this small, then they can't contain objects without blocking the walkway
             if (grid.Width <= 2 || grid.Height <= 2) return results;
-            
+
             // ignore 1-tile of padding for the walls
             int x0 = 1, y0 = 1, x1 = grid.Width - 2, y1 = grid.Height - 2;
             for (int gx = x0; gx <= x1; gx++)
-            for (int gy = y0; gy <= y1; gy++)
-            {
-                if (grid.Cells[gx, gy] != CellType.Floor) continue;
-                // Bernoulli trial
-                if (rng.NextDouble() < _density)
-                    results.Add(new Vector2Int(gx, gy));
-            }
+                for (int gy = y0; gy <= y1; gy++)
+                {
+                    if (grid.Cells[gx, gy] != CellType.Floor) continue;
+                    // Bernoulli trial
+                    if (rng.NextDouble() < _density)
+                        results.Add(new Vector2Int(gx, gy));
+                }
             return results;
         }
     }

@@ -179,7 +179,7 @@ GameObject:
   - component: {fileID: 228086547}
   - component: {fileID: 228086549}
   - component: {fileID: 228086548}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: WallMap
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -516,7 +516,7 @@ Camera:
   m_Enabled: 1
   serializedVersion: 2
   m_ClearFlags: 2
-  m_BackGroundColor: {r: 0.19215687, g: 0.3019608, b: 0.4745098, a: 0}
+  m_BackGroundColor: {r: 0.21568628, g: 0.21568628, b: 0.21568628, a: 0}
   m_projectionMatrixMode: 1
   m_GateFitMode: 2
   m_FOVAxisMode: 0
@@ -685,6 +685,7 @@ GameObject:
   - component: {fileID: 659519918}
   - component: {fileID: 659519919}
   - component: {fileID: 659519920}
+  - component: {fileID: 659519921}
   m_Layer: 0
   m_Name: MultiplayerGameManager
   m_TagString: Untagged
@@ -743,6 +744,18 @@ MonoBehaviour:
   sceneViewId: 1
   InstantiationId: 0
   isRuntimeInstantiated: 0
+--- !u!114 &659519921
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 659519916}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 28bedaf20c951f342944ce348ef121db, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &725286134
 GameObject:
   m_ObjectHideFlags: 0
@@ -1299,8 +1312,8 @@ MonoBehaviour:
   _spikeTrapPrefab: {fileID: 7965784340935701847, guid: 02b5f1f5677d148c6b4edeaabbe444dd, type: 3}
   _spikeTrapDensity: 0.25
   _pressurePlatePrefab: {fileID: 5125463752471852338, guid: 1e14663a2e8d94a9683e8b9104f32250, type: 3}
-  _doorTile: {fileID: 11400000, guid: 49645ad6b49a64f96b480f961bf4eb7a, type: 2}
-  _aStarTile: {fileID: 11400000, guid: 184ffb66ee14e5d42986bbd3a2d67ec5, type: 2}
+  _doorTile: {fileID: 0}
+  _aStarTile: {fileID: 0}
   _debugMap: {fileID: 1048886281}
   healthBarController: {fileID: 2136506}
 --- !u!4 &1371193003

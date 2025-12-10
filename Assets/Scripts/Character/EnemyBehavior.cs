@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Photon.Pun;
 using UnityEngine;
 
 namespace DungeonGenerator.Character
@@ -8,7 +9,7 @@ namespace DungeonGenerator.Character
     /// Requires a Rigidbody2D and optionally subscribes to PlayerSpawnController.
     /// </summary>
     [RequireComponent(typeof(Rigidbody2D))]
-    public class EnemyBehavior : MonoBehaviour
+    public class EnemyBehavior : MonoBehaviour, IPunObservable
     {
         [Header("Movement")]
         [SerializeField] private float moveSpeed = 2.5f;
@@ -23,11 +24,15 @@ namespace DungeonGenerator.Character
         private Rigidbody2D body;
         private PlayerSpawnController spawnController;
 
+        private Animator anim;
+
         private void Awake()
         {
             body = GetComponent<Rigidbody2D>();
             body.gravityScale = 0f;
             body.freezeRotation = true;
+            anim = GetComponent<Animator>();
+
         }
 
         private void OnEnable()
@@ -35,18 +40,27 @@ namespace DungeonGenerator.Character
             spawnController = FindAnyObjectByType<PlayerSpawnController>();
             CacheExistingPlayers();
 
+            /*
             if (spawnController != null)
             {
                 spawnController.PlayerSpawned += HandlePlayerSpawned;
             }
+            */
+
+            GameManager.instance.updatePlayers += UpdatePlayerTargets;
+            UpdatePlayerTargets(GameManager.instance.GetPlayers);
         }
 
         private void OnDisable()
         {
+            /*
             if (spawnController != null)
             {
                 spawnController.PlayerSpawned -= HandlePlayerSpawned;
             }
+            */
+
+            GameManager.instance.updatePlayers -= UpdatePlayerTargets;
         }
 
         private void FixedUpdate()
@@ -70,11 +84,18 @@ namespace DungeonGenerator.Character
                     Vector2.zero,
                     acceleration * Time.fixedDeltaTime);
             }
+
+            Vector2 vel = body.linearVelocity;
+
+            anim.SetFloat("moveX", vel.x);
+            anim.SetFloat("moveY", vel.y);
+            anim.SetFloat("moveSpeed", vel.magnitude);
+
         }
 
         private void CacheExistingPlayers()
         {
-            PlayerCharacterController[] players = FindObjectsByType<PlayerCharacterController>(FindObjectsSortMode.None);
+            PlayerCharacterController[] players = FindObjectsByType<PlayerCharacterController>(sortMode: FindObjectsSortMode.None);
             foreach (PlayerCharacterController player in players)
             {
                 RegisterPlayer(player.transform);
@@ -106,6 +127,15 @@ namespace DungeonGenerator.Character
             if (!trackedPlayers.Contains(playerTransform))
             {
                 trackedPlayers.Add(playerTransform);
+            }
+        }
+
+        private void UpdatePlayerTargets(Dictionary<PlayerDataContainer, Transform> players)
+        {
+            trackedPlayers.Clear();
+            foreach (KeyValuePair<PlayerDataContainer, Transform> player in players)
+            {
+                trackedPlayers.Add(player.Value);
             }
         }
 
@@ -166,11 +196,32 @@ namespace DungeonGenerator.Character
             return !blocked;
         }
 
+        public void OnPhotonSerializeView(PhotonStream stream, PhotonMessageInfo info)
+        {
+            if (stream.IsWriting)
+            {
+                stream.SendNext(transform.position);
+            }
+            else if (stream.IsReading)
+            {
+                transform.position = (Vector3)stream.ReceiveNext();
+            }
+        }
+
 #if UNITY_EDITOR
         private void OnDrawGizmosSelected()
         {
             Gizmos.color = Color.yellow;
             Gizmos.DrawWireSphere(transform.position, detectionRange);
+
+        }
+
+        private void OnDrawGizmos()
+        {
+            for (int i = 0; i < trackedPlayers.Count; i++)
+            {
+                Debug.DrawLine(transform.position, trackedPlayers[i].transform.position);
+            }
         }
 #endif
     }

@@ -31,6 +31,10 @@ public class PlayerStats : MonoBehaviour
     [SerializeField]
     private bool hasKey;
 
+    private Rigidbody2D rb;
+    [SerializeField]
+    private GameObject gameOverScreen;
+
     public float Health { get { return health; } }
     public float MaxHealth { get { return maxHealth; } }
     public float MaxTotalHealth { get { return maxTotalHealth; } }
@@ -73,11 +77,17 @@ public class PlayerStats : MonoBehaviour
         hasKey = change;
     }
 
+    void Start()
+    {
+        rb = GetComponent<Rigidbody2D>();
+    }
+
     public void Update()
     {
         if (health == 0)
         {
-            Destroy(gameObject);
+            rb.constraints = RigidbodyConstraints2D.FreezePositionX | RigidbodyConstraints2D.FreezePositionY;
+            Instantiate(gameOverScreen);
         }
     }
 }

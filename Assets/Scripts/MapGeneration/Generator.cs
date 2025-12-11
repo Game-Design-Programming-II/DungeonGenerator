@@ -8,6 +8,7 @@ using UnityEngine.Serialization;
 using UnityEngine.Tilemaps;
 using DungeonGenerator.Character;
 using Photon.Pun;
+using Interactibles;
 
 namespace MapGeneration
 {
@@ -56,6 +57,9 @@ namespace MapGeneration
         [SerializeField] private TileBase _doorTile;
         [SerializeField] private TileBase _aStarTile;
         [SerializeField] private Tilemap _debugMap;
+
+        private int _generatedPressureplateRooms = 0;
+        public int GetPressurePR { get { return _generatedPressureplateRooms; } }
 
         // start and end position stuff
         private Room _startRoom, _endRoom;
@@ -466,6 +470,9 @@ namespace MapGeneration
             GenerateRoomContent();
             EnsureRoomConnectivityAStar(); // guarantee paths and clear blocking
             RefreshWallColliders();
+
+            GameObject gm = GameObject.FindGameObjectWithTag("Chest");
+            gm.GetComponent<Chest>().SetNeededKeys();
         }
 
         private void GenerateRoomContent()
@@ -721,6 +728,8 @@ namespace MapGeneration
                     Debug.LogWarning("[PressurePuzzle] Unable to place all pressure plates.");
                     break;
                 }
+
+                _generatedPressureplateRooms++;
 
                 grid.Cells[cell.x, cell.y] = CellType.Prop;
                 SpawnPrefabAtCell(_pressurePlatePrefab, grid, cell);

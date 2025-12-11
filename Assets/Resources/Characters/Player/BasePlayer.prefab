@@ -346,7 +346,7 @@ MonoBehaviour:
   health: 16
   maxHealth: 16
   maxTotalHealth: 16
-  hasKey: 1
+  hasKey: 0
 --- !u!114 &3093836594385018606
 MonoBehaviour:
   m_ObjectHideFlags: 0

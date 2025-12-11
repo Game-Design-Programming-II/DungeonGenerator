@@ -9,7 +9,7 @@ public class PlayerStats : MonoBehaviour
     public delegate void OnHealthChangedDelegate();
     public OnHealthChangedDelegate onHealthChangedCallback;
 
-    #region Sigleton
+    #region Singleton
     private static PlayerStats instance;
     public static PlayerStats Instance
     {
@@ -72,11 +72,12 @@ public class PlayerStats : MonoBehaviour
     {
         hasKey = change;
     }
+
     public void Update()
     {
-        if ((health == 0))
+        if (health == 0)
         {
-            Destroy(this);
+            Destroy(gameObject);
         }
     }
 }

@@ -85,8 +85,5 @@ public class HealthBarController : MonoBehaviour
         }
 
     }
-    
-    
-
 }
 

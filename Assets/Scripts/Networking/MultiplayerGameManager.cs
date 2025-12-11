@@ -63,13 +63,13 @@ namespace Networking
             PhotonNetwork.AutomaticallySyncScene = true;
         }
 
-        private void OnEnable()
+        public override void OnEnable()
         {
             SceneManager.sceneLoaded += OnSceneLoaded;
             HookGeneratorIfNeeded();
         }
 
-        private void OnDisable()
+        public override void OnDisable()
         {
             SceneManager.sceneLoaded -= OnSceneLoaded;
             if (generator != null)
@@ -109,6 +109,13 @@ namespace Networking
             GameObject playerObject = PhotonNetwork.Instantiate(networkPlayerPrefabPath, spawnPosition, Quaternion.identity);
             RegisterPlayerInstance(PhotonNetwork.LocalPlayer.ActorNumber, playerObject);
             localPlayerSpawned = true;
+
+            // Apply selected class loadout if present
+            var loadout = playerObject.GetComponent<NetworkPlayerLoadout>();
+            if (loadout == null)
+            {
+                loadout = playerObject.AddComponent<NetworkPlayerLoadout>();
+            }
 
             // Notify listeners (camera, UI, etc.) that our local player exists.
             try

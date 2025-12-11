@@ -107,7 +107,7 @@ public class CameraController : MonoBehaviour
     private void TrySetLocalNetworkPlayerAsTarget()
     {
         // Find a locally-owned network player and follow it.
-        NetworkPlayerController[] players = FindObjectsOfType<NetworkPlayerController>();
+        NetworkPlayerController[] players = FindObjectsByType<NetworkPlayerController>(FindObjectsSortMode.None);
         foreach (var npc in players)
         {
             if (npc != null && npc.photonView != null && npc.photonView.IsMine)

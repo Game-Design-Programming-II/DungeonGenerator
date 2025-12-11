@@ -310,6 +310,7 @@ MonoBehaviour:
   maxHealth: 16
   maxTotalHealth: 16
   hasKey: 1
+  gameOverScreen: {fileID: 5731610284139000442, guid: ec3a75fab3de9416eb94885107104df3, type: 3}
 --- !u!114 &3093836594385018606
 MonoBehaviour:
   m_ObjectHideFlags: 0

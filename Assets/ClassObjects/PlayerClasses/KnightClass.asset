@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5918cc017cb2e43929ffaf8c74c7bfe5, type: 3}
+  m_Name: KnightClass
+  m_EditorClassIdentifier: 
+  displayName: Bill
+  icon: {fileID: 0}
+  levelingProfile: {fileID: 11400000, guid: 1563f0955dc424a8fb08f73c0ffd3843, type: 2}
+  statBlock: {fileID: 11400000, guid: d9eacdda7f3a54e7a936f84cf39ec486, type: 2}
+  allowedWeaponTypes:
+  - {fileID: 11400000, guid: d0b459b7ecb9b4026997927bc781880c, type: 2}
+  - {fileID: 11400000, guid: 99cec545ffb3b4b158c8beb09935d102, type: 2}
+  - {fileID: 11400000, guid: e2138a18a24a946b78e2af7d653825d6, type: 2}
+  knownSpells:
+  - {fileID: 11400000, guid: d2049b4e9384c43779bde095ea6a84fc, type: 2}

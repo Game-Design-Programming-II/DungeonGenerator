@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7235e9106fd4d490fa930b2c49431433, type: 3}
+  m_Name: Regenerate Health
+  m_EditorClassIdentifier: 
+  displayName: Regenerate Health
+  icon: {fileID: 0}
+  element: {fileID: 0}
+  manaCost: 6
+  cooldown: 2
+  effect: 1
+  baseAmount: 2
+  dice:
+  - count: 1
+    sides: 4
+  continuous: 1
+  duration: 5
+  tickInterval: 0.5
+  targeting: 0
+  projectilePrefab: {fileID: 0}
+  projectileSpeed: 8
+  projectileMaxDistance: 10
+  hitLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  castVfxPrefab: {fileID: 0}
+  impactVfxPrefab: {fileID: 0}

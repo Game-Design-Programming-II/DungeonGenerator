@@ -8,7 +8,9 @@ namespace Interactibles
         {
             if (collision.tag == "Player")
             {
-                collision.GetComponent<PlayerStats>().Key(true);
+                //collision.GetComponent<PlayerStats>().Key(true);
+                GameObject chest = GameObject.FindGameObjectWithTag("Chest");
+                chest.GetComponent<Chest>().AddKey(-1);
                 Destroy(this.gameObject);
             }
         }

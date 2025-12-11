@@ -294,7 +294,7 @@ Rigidbody2D:
     m_Bits: 0
   m_Interpolate: 0
   m_SleepingMode: 1
-  m_CollisionDetection: 0
+  m_CollisionDetection: 1
   m_Constraints: 4
 --- !u!114 &6088495075702635795
 MonoBehaviour:
@@ -354,7 +354,9 @@ MonoBehaviour:
   Synchronization: 3
   OwnershipTransfer: 0
   observableSearch: 1
-  ObservedComponents: []
+  ObservedComponents:
+  - {fileID: 6088495075702635795}
+  - {fileID: 5631310528049065155}
   sceneViewId: 0
   InstantiationId: 0
   isRuntimeInstantiated: 0

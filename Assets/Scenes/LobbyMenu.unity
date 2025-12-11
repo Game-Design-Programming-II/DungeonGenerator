@@ -1498,9 +1498,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2f9e35700aeacc14ab384792c31ae469, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _buttons: []
   _anim: {fileID: 522008200}
   _aS: {fileID: 522008198}
-  _classUI: {fileID: 1579306995}
+  _classUI: {fileID: 0}
   _classID: 2
 --- !u!212 &522008202
 SpriteRenderer:
@@ -1570,7 +1571,7 @@ Transform:
   m_LocalScale: {x: 2, y: 2, z: 2}
   m_ConstrainProportionsScale: 1
   m_Children: []
-  m_Father: {fileID: 1579306996}
+  m_Father: {fileID: 870643234}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &522008204
 MonoBehaviour:
@@ -1591,7 +1592,7 @@ MonoBehaviour:
     m_SelectOnDown: {fileID: 0}
     m_SelectOnLeft: {fileID: 0}
     m_SelectOnRight: {fileID: 0}
-  m_Transition: 1
+  m_Transition: 0
   m_Colors:
     m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
     m_HighlightedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
@@ -1616,7 +1617,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1579306995}
+      - m_Target: {fileID: 870643233}
         m_TargetAssemblyTypeName: ClassSelectUI, Assembly-CSharp
         m_MethodName: Select
         m_Mode: 3
@@ -2083,6 +2084,65 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 860333595}
   m_CullTransparentMesh: 1
+--- !u!1 &870643232
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 870643234}
+  - component: {fileID: 870643233}
+  m_Layer: 0
+  m_Name: ClassSelectionScreen
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!114 &870643233
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 870643232}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f64c02c93138f416ead0c6dfe0be485a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  classes:
+  - {fileID: 11400000, guid: cbc303d3de4f542bf949f211e28641cc, type: 2}
+  - {fileID: 11400000, guid: ab82d8b942a224e50ba00afe214f8887, type: 2}
+  - {fileID: 11400000, guid: 217262d28b50c4e01b956fb868fee326, type: 2}
+  classButtons:
+  - {fileID: 1762679006}
+  - {fileID: 1329471380}
+  - {fileID: 522008204}
+  selectionLabel: {fileID: 0}
+  menuUi: {fileID: 1435867274}
+--- !u!4 &870643234
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 870643232}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 1920, y: 1080, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 1762679005}
+  - {fileID: 1329471379}
+  - {fileID: 522008203}
+  - {fileID: 917840952}
+  - {fileID: 1579306996}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &889946433
 GameObject:
   m_ObjectHideFlags: 0
@@ -2233,7 +2293,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1184295846}
-  m_Father: {fileID: 1579306996}
+  m_Father: {fileID: 870643234}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &941766618
 GameObject:
@@ -5306,9 +5366,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2f9e35700aeacc14ab384792c31ae469, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _buttons: []
   _anim: {fileID: 1329471376}
   _aS: {fileID: 1329471374}
-  _classUI: {fileID: 1579306995}
+  _classUI: {fileID: 0}
   _classID: 1
 --- !u!212 &1329471378
 SpriteRenderer:
@@ -5378,7 +5439,7 @@ Transform:
   m_LocalScale: {x: 2, y: 2, z: 2}
   m_ConstrainProportionsScale: 1
   m_Children: []
-  m_Father: {fileID: 1579306996}
+  m_Father: {fileID: 870643234}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1329471380
 MonoBehaviour:
@@ -5399,7 +5460,7 @@ MonoBehaviour:
     m_SelectOnDown: {fileID: 0}
     m_SelectOnLeft: {fileID: 0}
     m_SelectOnRight: {fileID: 0}
-  m_Transition: 1
+  m_Transition: 0
   m_Colors:
     m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
     m_HighlightedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
@@ -5424,7 +5485,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1579306995}
+      - m_Target: {fileID: 870643233}
         m_TargetAssemblyTypeName: ClassSelectUI, Assembly-CSharp
         m_MethodName: Select
         m_Mode: 3
@@ -5683,10 +5744,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   mainScreen: {fileID: 889946433}
   lobbyScreen: {fileID: 1543531486}
-  classSelectScreen: {fileID: 1579306994}
+  classSelectScreen: {fileID: 870643232}
   createRoomButton: {fileID: 1845402157}
   joinRoomButton: {fileID: 1610964223}
-  classSelectUI: {fileID: 1579306995}
+  classSelectUI: {fileID: 870643233}
   playerListText: {fileID: 1177146791}
   startGameButton: {fileID: 604042110}
   sceneName: DungeonGenerator
@@ -6194,36 +6255,13 @@ GameObject:
   - component: {fileID: 1579306999}
   - component: {fileID: 1579306998}
   - component: {fileID: 1579306997}
-  - component: {fileID: 1579306995}
   m_Layer: 5
-  m_Name: ClassSelectScreen
+  m_Name: ClassSelectCanvas
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
---- !u!114 &1579306995
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1579306994}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f64c02c93138f416ead0c6dfe0be485a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  classes:
-  - {fileID: 11400000, guid: cbc303d3de4f542bf949f211e28641cc, type: 2}
-  - {fileID: 11400000, guid: ab82d8b942a224e50ba00afe214f8887, type: 2}
-  - {fileID: 11400000, guid: 217262d28b50c4e01b956fb868fee326, type: 2}
-  classButtons:
-  - {fileID: 1762679006}
-  - {fileID: 1329471380}
-  - {fileID: 522008204}
-  selectionLabel: {fileID: 0}
-  menuUi: {fileID: 1435867274}
+  m_IsActive: 1
 --- !u!224 &1579306996
 RectTransform:
   m_ObjectHideFlags: 0
@@ -6236,12 +6274,8 @@ RectTransform:
   m_LocalScale: {x: 0, y: 0, z: 0}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 917840952}
-  - {fileID: 1762679005}
-  - {fileID: 1329471379}
-  - {fileID: 522008203}
   - {fileID: 2135213192}
-  m_Father: {fileID: 0}
+  m_Father: {fileID: 870643234}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
@@ -6305,11 +6339,11 @@ Canvas:
   m_OverrideSorting: 0
   m_OverridePixelPerfect: 0
   m_SortingBucketNormalizedSize: 0
-  m_VertexColorAlwaysGammaSpace: 0
+  m_VertexColorAlwaysGammaSpace: 1
   m_AdditionalShaderChannelsFlag: 25
   m_UpdateRectTransformForStandalone: 0
   m_SortingLayerID: 0
-  m_SortingOrder: 0
+  m_SortingOrder: 1
   m_TargetDisplay: 0
 --- !u!1 &1610964221
 GameObject:
@@ -6745,8 +6779,8 @@ BoxCollider2D:
   m_Offset: {x: 0, y: 0}
   m_SpriteTilingProperty:
     border: {x: 0, y: 0, z: 0, w: 0}
-    pivot: {x: 0.5, y: 0.5}
-    oldSize: {x: 0.875, y: 1.0625}
+    pivot: {x: 0.525, y: 0.5}
+    oldSize: {x: 1, y: 1.0625}
     newSize: {x: 1, y: 1}
     adaptiveTilingThreshold: 0.5
     drawMode: 0
@@ -6788,9 +6822,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2f9e35700aeacc14ab384792c31ae469, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _buttons: []
   _anim: {fileID: 1762679002}
   _aS: {fileID: 1762679000}
-  _classUI: {fileID: 1579306995}
+  _classUI: {fileID: 0}
   _classID: 0
 --- !u!212 &1762679004
 SpriteRenderer:
@@ -6860,7 +6895,7 @@ Transform:
   m_LocalScale: {x: 2, y: 2, z: 2}
   m_ConstrainProportionsScale: 1
   m_Children: []
-  m_Father: {fileID: 1579306996}
+  m_Father: {fileID: 870643234}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1762679006
 MonoBehaviour:
@@ -6881,7 +6916,7 @@ MonoBehaviour:
     m_SelectOnDown: {fileID: 0}
     m_SelectOnLeft: {fileID: 0}
     m_SelectOnRight: {fileID: 0}
-  m_Transition: 1
+  m_Transition: 0
   m_Colors:
     m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
     m_HighlightedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
@@ -6906,7 +6941,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1579306995}
+      - m_Target: {fileID: 870643233}
         m_TargetAssemblyTypeName: ClassSelectUI, Assembly-CSharp
         m_MethodName: Select
         m_Mode: 3
@@ -7910,7 +7945,7 @@ SceneRoots:
   - {fileID: 1526157100}
   - {fileID: 1543531490}
   - {fileID: 889946437}
-  - {fileID: 1579306996}
+  - {fileID: 870643234}
   - {fileID: 1333445580}
   - {fileID: 1435867275}
   - {fileID: 332158474}

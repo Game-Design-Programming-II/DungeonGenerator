@@ -5,6 +5,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
+[RequireComponent(typeof(Collider2D))]
 public class ClassSelectionAnimator : MonoBehaviour
 {
     [Header("Animation/Audio Settings")]
@@ -16,6 +17,26 @@ public class ClassSelectionAnimator : MonoBehaviour
     [Tooltip("The ID of the class this button selects.")]
     [SerializeField, Range(0,2)] private uint _classID;
     private bool _selected;
+
+    private void Awake()
+    {
+        if (_classUI == null)
+        {
+            _classUI = FindAnyObjectByType<ClassSelectUI>();
+            if (_classUI == null)
+            {
+                Debug.LogWarning($"{nameof(ClassSelectionAnimator)} on {name} could not find a ClassSelectUI in the scene.");
+            }
+        }
+    }
+
+    private void OnValidate()
+    {
+        if (_classUI == null)
+        {
+            _classUI = FindAnyObjectByType<ClassSelectUI>();
+        }
+    }
 
     private void OnMouseEnter()
     {

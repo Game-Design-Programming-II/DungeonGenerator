@@ -412,6 +412,7 @@ GameObject:
   - component: {fileID: 311219200}
   - component: {fileID: 311219199}
   - component: {fileID: 311219198}
+  - component: {fileID: 311219201}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -493,6 +494,50 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &311219201
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 311219197}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a79441f348de89743a2939f4d699eac1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_RenderShadows: 1
+  m_RequiresDepthTextureOption: 2
+  m_RequiresOpaqueTextureOption: 2
+  m_CameraType: 0
+  m_Cameras: []
+  m_RendererIndex: -1
+  m_VolumeLayerMask:
+    serializedVersion: 2
+    m_Bits: 1
+  m_VolumeTrigger: {fileID: 0}
+  m_VolumeFrameworkUpdateModeOption: 2
+  m_RenderPostProcessing: 0
+  m_Antialiasing: 0
+  m_AntialiasingQuality: 2
+  m_StopNaN: 0
+  m_Dithering: 0
+  m_ClearDepth: 1
+  m_AllowXRRendering: 1
+  m_AllowHDROutput: 1
+  m_UseScreenCoordOverride: 0
+  m_ScreenSizeOverride: {x: 0, y: 0, z: 0, w: 0}
+  m_ScreenCoordScaleBias: {x: 0, y: 0, z: 0, w: 0}
+  m_RequiresDepthTexture: 0
+  m_RequiresColorTexture: 0
+  m_Version: 2
+  m_TaaSettings:
+    m_Quality: 3
+    m_FrameInfluence: 0.1
+    m_JitterScale: 1
+    m_MipBias: 0
+    m_VarianceClampScale: 0.9
+    m_ContrastAdaptiveSharpening: 0
 --- !u!1 &522008197
 GameObject:
   m_ObjectHideFlags: 0
@@ -694,9 +739,9 @@ MonoBehaviour:
   _buttons:
   - {fileID: 1762679003}
   - {fileID: 1329471377}
-  _gM: {fileID: 212268581}
   _anim: {fileID: 522008200}
   _aS: {fileID: 522008198}
+  _classUI: {fileID: 0}
   _classID: 2
 --- !u!212 &522008202
 SpriteRenderer:
@@ -3629,9 +3674,9 @@ MonoBehaviour:
   _buttons:
   - {fileID: 1762679003}
   - {fileID: 522008201}
-  _gM: {fileID: 212268581}
   _anim: {fileID: 1329471376}
   _aS: {fileID: 1329471374}
+  _classUI: {fileID: 0}
   _classID: 1
 --- !u!212 &1329471378
 SpriteRenderer:
@@ -4084,8 +4129,8 @@ BoxCollider2D:
   m_Offset: {x: 0, y: 0}
   m_SpriteTilingProperty:
     border: {x: 0, y: 0, z: 0, w: 0}
-    pivot: {x: 0.5, y: 0.5}
-    oldSize: {x: 0.875, y: 1.0625}
+    pivot: {x: 0.525, y: 0.5}
+    oldSize: {x: 1, y: 1.0625}
     newSize: {x: 1, y: 1}
     adaptiveTilingThreshold: 0.5
     drawMode: 0
@@ -4130,9 +4175,9 @@ MonoBehaviour:
   _buttons:
   - {fileID: 1329471377}
   - {fileID: 522008201}
-  _gM: {fileID: 212268581}
   _anim: {fileID: 1762679002}
   _aS: {fileID: 1762679000}
+  _classUI: {fileID: 0}
   _classID: 0
 --- !u!212 &1762679004
 SpriteRenderer:

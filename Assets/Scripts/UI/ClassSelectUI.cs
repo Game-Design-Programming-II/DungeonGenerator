@@ -56,6 +56,7 @@ public class ClassSelectUI : MonoBehaviour
     /// </summary>
     public void Select(int index)
     {
+        Debug.Log($"[ClassSelectUI] Selecting class {index}");
         if (index < 0 || index >= classes.Count)
         {
             Debug.LogWarning($"[ClassSelectUI] Invalid class index {index}.", this);

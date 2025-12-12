@@ -1026,6 +1026,32 @@ namespace MapGeneration
 
             Vector3 worldPos = GetCellCenterWorld(grid, cell);
             Transform parent = _runtimeContentParent != null ? _runtimeContentParent : transform;
+
+            bool isNetworked = Photon.Pun.PhotonNetwork.IsConnected && !Photon.Pun.PhotonNetwork.OfflineMode;
+            bool isEnemy = prefab.CompareTag("Enemy");
+            var pv = prefab.GetComponent<Photon.Pun.PhotonView>();
+
+            // Network-spawn enemies (with PhotonView) from the master so destruction and ownership sync.
+            if (isNetworked && isEnemy && pv != null)
+            {
+                if (!Photon.Pun.PhotonNetwork.IsMasterClient)
+                {
+                    return; // master will spawn it for everyone
+                }
+
+                // Prefabs are kept under Resources/Characters/Enemies
+                string path = $"Characters/Enemies/{prefab.name}";
+                try
+                {
+                    Photon.Pun.PhotonNetwork.InstantiateRoomObject(path, worldPos, Quaternion.identity);
+                    return;
+                }
+                catch (System.Exception ex)
+                {
+                    Debug.LogWarning($"[Generator] Network instantiate failed for '{path}', falling back to local spawn. {ex.Message}", this);
+                }
+            }
+
             Instantiate(prefab, worldPos, Quaternion.identity, parent);
         }
 

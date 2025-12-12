@@ -95,6 +95,8 @@ namespace Networking
             var viewIds = new List<int>(hitCount);
             var directDamageables = new List<IDamageable>();
             var directHealth = new List<CharacterHealth>();
+            var viewDamageables = new List<IDamageable>();
+            var viewHealth = new List<CharacterHealth>();
             _dedupDamageables.Clear();
             _dedupHealth.Clear();
 
@@ -149,8 +151,18 @@ namespace Networking
             {
                 if (PhotonNetwork.IsMasterClient)
                 {
-                    ApplyMeleeToViews(viewIds);
-                    ApplyMeleeDirect(directDamageables, directHealth);
+                    ApplyMeleeToViews(viewIds, viewDamageables, viewHealth);
+                    if (_attacker != null)
+                    {
+                        // Merge all targets and resolve once so cooldown is applied a single time.
+                        var mergedDamageables = new List<IDamageable>(viewDamageables.Count + directDamageables.Count);
+                        mergedDamageables.AddRange(viewDamageables);
+                        mergedDamageables.AddRange(directDamageables);
+                        var mergedHealth = new List<CharacterHealth>(viewHealth.Count + directHealth.Count);
+                        mergedHealth.AddRange(viewHealth);
+                        mergedHealth.AddRange(directHealth);
+                        _attacker.TryAttackTargets(mergedDamageables, mergedHealth);
+                    }
                     if (debugLogs) Debug.Log($"[NetworkCombatController] Master applied melee locally. Views:{viewIds.Count} DirectIDmg:{directDamageables.Count} DirectHealth:{directHealth.Count}", this);
                 }
                 else
@@ -159,8 +171,18 @@ namespace Networking
                         photonView.RPC(nameof(RPC_ApplyMelee), RpcTarget.MasterClient, viewIds.ToArray());
 
                     // Non-networked targets (if any) are handled locally by the owner.
+                    bool appliedLocal = false;
                     if (directDamageables.Count > 0 || directHealth.Count > 0)
+                    {
                         ApplyMeleeDirect(directDamageables, directHealth);
+                        appliedLocal = true;
+                    }
+
+                    // If we only swung at networked targets, still consume cooldown locally.
+                    if (!appliedLocal && viewIds.Count > 0 && _attacker != null)
+                    {
+                        _attacker.ConsumeCooldown();
+                    }
 
                     if (debugLogs)
                     {
@@ -195,18 +217,21 @@ namespace Networking
         void RPC_ApplyMelee(int[] targetViewIds, PhotonMessageInfo info)
         {
             if (!PhotonNetwork.IsMasterClient) return;
-            ApplyMeleeToViews(targetViewIds);
+            _dedupDamageables.Clear();
+            _dedupHealth.Clear();
+            var dmg = new List<IDamageable>();
+            var health = new List<CharacterHealth>();
+            ApplyMeleeToViews(targetViewIds, dmg, health);
+            if (_attacker != null)
+            {
+                _attacker.TryAttackTargets(dmg, health);
+            }
             if (debugLogs) Debug.Log($"[NetworkCombatController] Master RPC_ApplyMelee from actor {info.Sender?.ActorNumber}, targets:{targetViewIds?.Length ?? 0}", this);
         }
 
-        void ApplyMeleeToViews(IReadOnlyList<int> targetViewIds)
+        void ApplyMeleeToViews(IReadOnlyList<int> targetViewIds, List<IDamageable> damageables, List<CharacterHealth> healthTargets)
         {
-            if (targetViewIds == null || _attacker == null) return;
-
-            _dedupDamageables.Clear();
-            _dedupHealth.Clear();
-            var damageables = new List<IDamageable>(targetViewIds.Count);
-            var healthTargets = new List<CharacterHealth>(targetViewIds.Count);
+            if (targetViewIds == null) return;
             for (int i = 0; i < targetViewIds.Count; i++)
             {
                 var pv = PhotonView.Find(targetViewIds[i]);
@@ -225,22 +250,12 @@ namespace Networking
                     }
                 }
             }
-
-            if (damageables.Count > 0) _attacker.TryAttackTargets(damageables);
-            if (healthTargets.Count > 0) _attacker.TryAttackTargets(healthTargets);
         }
 
         void ApplyMeleeDirect(IReadOnlyList<IDamageable> damageables, IReadOnlyList<CharacterHealth> healthTargets)
         {
             if (_attacker == null) return;
-            if (damageables != null && damageables.Count > 0)
-            {
-                _attacker.TryAttackTargets(damageables);
-            }
-            if (healthTargets != null && healthTargets.Count > 0)
-            {
-                _attacker.TryAttackTargets(healthTargets);
-            }
+            _attacker.TryAttackTargets(damageables, healthTargets);
         }
 
         Vector2 GetAimDirection(Vector3 origin)

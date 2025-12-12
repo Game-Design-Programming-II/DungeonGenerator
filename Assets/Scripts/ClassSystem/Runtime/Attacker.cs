@@ -21,6 +21,14 @@ namespace ClassSystem.Runtime
             _equip = GetComponent<EquipmentManager>();
         }
 
+        /// <summary>
+        /// Manually consume the attack cooldown (useful when hit resolution is deferred to another peer).
+        /// </summary>
+        public void ConsumeCooldown()
+        {
+            _lastAttackTime = Time.time;
+        }
+
         public bool CanAttack()
         {
             if (_equip.weapon == null)
@@ -42,6 +50,47 @@ namespace ClassSystem.Runtime
             _lastAttackTime = Time.time;
 
             return ResolveAttack(target);
+        }
+
+        /// <summary>
+        /// Attempts to hit mixed IDamageable and CharacterHealth targets in a single swing.
+        /// Cooldown is consumed once when any target is attempted.
+        /// </summary>
+        public bool TryAttackTargets(IReadOnlyList<IDamageable> damageables, IReadOnlyList<CharacterHealth> healthTargets)
+        {
+            if (!CanAttack()) return false;
+
+            bool attempted = false;
+            bool hitSomething = false;
+
+            if (damageables != null)
+            {
+                for (int i = 0; i < damageables.Count; i++)
+                {
+                    var target = damageables[i];
+                    if (target == null) continue;
+                    attempted = true;
+                    if (ResolveAttack(target)) hitSomething = true;
+                }
+            }
+
+            if (healthTargets != null)
+            {
+                for (int i = 0; i < healthTargets.Count; i++)
+                {
+                    var target = healthTargets[i];
+                    if (target == null) continue;
+                    attempted = true;
+                    if (ResolveAttack(target)) hitSomething = true;
+                }
+            }
+
+            if (attempted)
+            {
+                _lastAttackTime = Time.time;
+            }
+
+            return hitSomething;
         }
 
         /// <summary>

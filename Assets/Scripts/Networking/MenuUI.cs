@@ -104,6 +104,12 @@ public class MenuUI : MonoBehaviourPunCallbacks
         UpdateLobbyUI();
     }
 
+    public override void OnPlayerPropertiesUpdate(Player targetPlayer, Hashtable changedProps)
+    {
+        // Refresh when class selection/custom properties change.
+        UpdateLobbyUI();
+    }
+
     public override void OnPlayerLeftRoom(Player otherPlayer)
     {
         //base.OnPlayerLeftRoom(otherPlayer);

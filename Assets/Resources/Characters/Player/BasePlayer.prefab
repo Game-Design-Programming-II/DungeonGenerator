@@ -427,7 +427,7 @@ MonoBehaviour:
   meleeHalfAngleDegrees: 75
   targetLayers:
     serializedVersion: 2
-    m_Bits: 695
+    m_Bits: 4294967295
   attackOrigin: {fileID: 0}
   debugLogs: 1
   equippedSpell: {fileID: 0}

@@ -21,6 +21,10 @@ namespace Character
 
         public bool IsDead => currentHealth <= 0f;
 
+        [Header("XP Rewards")]
+        [Tooltip("Flat experience granted to the last attacker when this character dies.")]
+        public int xpOnDeath = 100;
+
         [Header("Events")] 
         public UnityEvent<float, float> OnHealthChanged; // (current, max)
         public UnityEvent OnDeath;
@@ -38,6 +42,8 @@ namespace Character
         }
 
         private readonly List<ActiveEffect> _effects = new List<ActiveEffect>();
+        private ClassSystem.Runtime.CharacterStats _lastDamager;
+        private bool _deathHandled;
 
         private void Awake()
         {
@@ -75,12 +81,12 @@ namespace Character
         public void ApplyDamage(float amount, DamageType type, GameObject source = null)
         {
             if (IsDead) return;
+            _lastDamager = ResolveStatsFromSource(source);
             currentHealth = Mathf.Clamp(currentHealth - Mathf.Max(0f, amount), 0f, maxHealth);
             RaiseHealthChanged();
             if (IsDead)
             {
-                OnDeath?.Invoke();
-                Destroy(gameObject);
+                HandleDeath();
             }
         }
 
@@ -117,6 +123,70 @@ namespace Character
             OnHealthChanged?.Invoke(currentHealth, maxHealth);
         }
 
+        private ClassSystem.Runtime.CharacterStats ResolveStatsFromSource(GameObject source)
+        {
+            if (source == null) return null;
+            return source.GetComponentInParent<ClassSystem.Runtime.CharacterStats>();
+        }
+
+        private void HandleDeath()
+        {
+            if (_deathHandled) return;
+            _deathHandled = true;
+
+            if (_lastDamager != null && xpOnDeath > 0)
+            {
+                _lastDamager.AddExperience(xpOnDeath);
+            }
+
+            OnDeath?.Invoke();
+
+            var pv = GetComponent<PhotonView>();
+            bool isNetworked = pv != null && PhotonNetwork.IsConnected && !PhotonNetwork.OfflineMode;
+
+            if (!isNetworked)
+            {
+                if (pv != null && pv.IsMine)
+                {
+                    PhotonNetwork.Destroy(pv);
+                }
+                else
+                {
+                    Destroy(gameObject);
+                }
+                return;
+            }
+
+            if (PhotonNetwork.IsMasterClient || (pv != null && pv.IsMine))
+            {
+                PhotonNetwork.Destroy(pv);
+            }
+            else if (pv != null)
+            {
+                // Ask the master to destroy this view and buffer so late-joiners also remove it.
+                pv.RPC(nameof(RPC_RequestDestroy), RpcTarget.MasterClient);
+                pv.RPC(nameof(RPC_ClientDestroy), RpcTarget.AllBuffered);
+            }
+        }
+
+        [PunRPC]
+        void RPC_RequestDestroy()
+        {
+            var pv = GetComponent<PhotonView>();
+            if (pv != null && PhotonNetwork.IsMasterClient)
+            {
+                PhotonNetwork.Destroy(pv);
+            }
+        }
+
+        [PunRPC]
+        void RPC_ClientDestroy()
+        {
+            if (_deathHandled) return;
+            _deathHandled = true;
+            Destroy(gameObject);
+        }
+
         public void OnPhotonSerializeView(PhotonStream stream, PhotonMessageInfo info)
         {
             if (stream.IsWriting)
@@ -130,4 +200,3 @@ namespace Character
         }
     }
 }
-

@@ -11,10 +11,10 @@ namespace Character
     {
         [Header("Health")]
         [Tooltip("Maximum health points.")]
-        public float maxHealth = 100f;
+        public float maxHealth = 10f;
 
         [Tooltip("Starting health.")]
-        public float startHealth = 100f;
+        public float startHealth = 10f;
 
         [SerializeField] private float currentHealth;
         public float CurrentHealth => currentHealth;

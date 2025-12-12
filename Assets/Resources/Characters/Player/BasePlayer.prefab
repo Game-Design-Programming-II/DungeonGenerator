@@ -18,6 +18,11 @@ GameObject:
   - component: {fileID: 3093836594385018606}
   - component: {fileID: 9110779858042006093}
   - component: {fileID: 6714117090677973668}
+  - component: {fileID: -5142566166927115855}
+  - component: {fileID: 3956570756516716165}
+  - component: {fileID: -5370015265202776122}
+  - component: {fileID: -928945378510758255}
+  - component: {fileID: -6558462061385339799}
   m_Layer: 10
   m_Name: BasePlayer
   m_TagString: Player
@@ -361,3 +366,93 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b804bf0b08d724783ae5cb2810a1b431, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &-5142566166927115855
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8076220598909356601}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 23b4be4c39fd744539a558984c0ea9f9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  playerClass: {fileID: 0}
+  equipment: {fileID: 3956570756516716165}
+  level: 1
+  currentXp: 0
+  currentHealth: 0
+  currentMana: 0
+--- !u!114 &3956570756516716165
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8076220598909356601}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2e14cb37170944cceafaec3c5d0be265, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  weapon: {fileID: 0}
+  armor: {fileID: 0}
+--- !u!114 &-5370015265202776122
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8076220598909356601}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3f1e5f4ef2cf24c60baa970346decb72, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  debugLogs: 1
+--- !u!114 &-928945378510758255
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8076220598909356601}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 378eb56e6cb30434a8704e0330211079, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  meleeRange: 2.5
+  meleeHalfAngleDegrees: 75
+  targetLayers:
+    serializedVersion: 2
+    m_Bits: 695
+  attackOrigin: {fileID: 0}
+  debugLogs: 1
+  equippedSpell: {fileID: 0}
+  spellMuzzle: {fileID: 0}
+--- !u!114 &-6558462061385339799
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8076220598909356601}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b72bc7d76c5fc4de19a4ae7b3204f601, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  classRegistry:
+  - {fileID: 11400000, guid: cbc303d3de4f542bf949f211e28641cc, type: 2}
+  - {fileID: 11400000, guid: ab82d8b942a224e50ba00afe214f8887, type: 2}
+  - {fileID: 11400000, guid: 217262d28b50c4e01b956fb868fee326, type: 2}
+  defaultWeaponsByClass:
+  - {fileID: 11400000, guid: b6db6b95f415245cd82004911dec6ca4, type: 2}
+  - {fileID: 11400000, guid: 2c16c991af8f048aabdb73c3e0b65006, type: 2}
+  - {fileID: 11400000, guid: d5985294fbbb04743a3d121ee0cc4cef, type: 2}
+  defaultArmorsByClass:
+  - {fileID: 11400000, guid: 4235b7b4335c24101ab3b51624105be7, type: 2}
+  - {fileID: 11400000, guid: 4235b7b4335c24101ab3b51624105be7, type: 2}
+  - {fileID: 11400000, guid: 4235b7b4335c24101ab3b51624105be7, type: 2}
